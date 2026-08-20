@@ -7,9 +7,9 @@ import { Button, Card } from "@/components/ui";
 
 type Role = "student" | "teacher";
 
-export function AuthPanel() {
+export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" | "login" }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"signup" | "login">("signup");
+  const [mode, setMode] = useState<"signup" | "login">(initialMode);
   const [role, setRole] = useState<Role>("student");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

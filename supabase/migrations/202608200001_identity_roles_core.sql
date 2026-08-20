@@ -222,21 +222,35 @@ begin
   return new;
 end;
 $$;
-create trigger user_role_fields before insert or update on public."User"
+create trigger user_role_fields before update on public."User"
 for each row execute function public.validate_user_role_fields();
 
 -- Auth signup creates the profile row. Only student/teacher are accepted from
 -- signup metadata; admin and alumni can never be selected by a signup form.
 create or replace function public.handle_auth_user_created()
 returns trigger
-language plpgsql security definer set search_path = public
+language plpgsql security definer set search_path = ''
 as $$
-declare requested_role text := coalesce(new.raw_user_meta_data ->> 'role', 'student');
-declare safe_role public.user_role := case when requested_role = 'teacher' then 'teacher' else 'student' end;
+declare
+  safe_role public.user_role;
 begin
+  safe_role := case
+    when new.raw_user_meta_data ->> 'role' = 'teacher' then 'teacher'::public.user_role
+    else 'student'::public.user_role
+  end;
+
   insert into public."User" (id, name, email, role, teacher_approval_status)
-  values (new.id, coalesce(nullif(new.raw_user_meta_data ->> 'name', ''), split_part(new.email, '@', 1)),
-          new.email, safe_role, case when safe_role = 'teacher' then 'pending' else null end);
+  values (
+    new.id,
+    coalesce(nullif(new.raw_user_meta_data ->> 'name', ''), split_part(new.email, '@', 1)),
+    new.email,
+    safe_role,
+    case
+      when safe_role = 'teacher'::public.user_role then 'pending'::public.teacher_approval_status
+      else null
+    end
+  );
+
   if safe_role = 'student' then
     insert into public."Student" (user_id) values (new.id);
   end if;
