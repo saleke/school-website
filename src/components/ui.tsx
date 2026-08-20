@@ -1,0 +1,5 @@
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+export function Button({ className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) { return <button className={`inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-5 font-semibold text-[var(--accent-contrast)] ${className}`} {...props} />; }
+export function Card({ className = "", ...props }: HTMLAttributes<HTMLDivElement>) { return <div className={`rounded-xl border border-[var(--border)] bg-surface-1 p-6 shadow-[var(--shadow)] ${className}`} {...props} />; }
+export function Badge({ children }: { children: ReactNode }) { return <span className="inline-flex rounded-full border border-[var(--border)] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-text-secondary">{children}</span>; }
+export function Avatar({ name }: { name: string }) { const initials = name.split(" ").map((part) => part[0]).slice(0, 2).join(""); return <span aria-label={name} className="grid size-11 place-items-center rounded-full border border-[var(--border)] bg-surface-2 font-bold">{initials}</span>; }
