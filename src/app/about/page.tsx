@@ -1,0 +1,3 @@
+import Link from "next/link";
+import { Card } from "@/components/ui";
+export default function AboutPage() { return <main className="paper-grid min-h-screen px-5 py-8 sm:px-8 sm:py-12"><div className="mx-auto max-w-4xl"><Link href="/" className="text-sm font-semibold text-text-secondary">← School Platform</Link><Card className="mt-8"><p className="text-xs font-bold uppercase tracking-[0.18em] text-text-secondary">About us</p><h1 className="font-display mt-3 text-4xl font-semibold sm:text-6xl">A school record built around people.</h1><p className="mt-6 max-w-2xl text-lg leading-8 text-text-secondary">We help students learn with confidence, teachers work with clarity, and school communities keep the important moments together.</p></Card></div></main>; }
