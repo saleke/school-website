@@ -3,6 +3,7 @@ import { Lora, Source_Sans_3 } from "next/font/google";
 import { OfflineStatus } from "@/components/offline-status";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import "./globals.css";
+import type { ReactNode } from "react";
 
 const sourceSans = Source_Sans_3({
   variable: "--font-sans",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   description: "A low-data school community and learning platform.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
