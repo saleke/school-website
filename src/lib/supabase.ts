@@ -57,6 +57,7 @@ export async function signIn(email: string, password: string) {
     sessionStorage.removeItem("school_access_token");
     sessionStorage.removeItem("school_user_id");
   }
+
   const response = await fetch(supabaseEndpoint("/auth/v1/token?grant_type=password"), {
     method: "POST",
     headers: supabaseHeaders(),
@@ -66,6 +67,36 @@ export async function signIn(email: string, password: string) {
   const payload = await readJson<AuthResponse>(response);
   if (!response.ok) throw new Error(payload.error_description ?? payload.msg ?? "Unable to log in.");
   return payload;
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, then restart the dev server.");
+  }
+  const user = await getCurrentUser();
+  if (!user?.email) throw new Error("Your session is missing. Please log in again.");
+  const verification = await fetch(supabaseEndpoint("/auth/v1/token?grant_type=password"), {
+    method: "POST",
+    headers: supabaseHeaders(),
+    body: JSON.stringify({ email: user.email, password: currentPassword }),
+    cache: "no-store",
+  });
+  const verified = await readJson<AuthResponse>(verification);
+  if (!verification.ok || !verified.access_token) {
+    throw new Error(verified.error_description ?? verified.msg ?? "Current password is incorrect.");
+  }
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("school_access_token", verified.access_token);
+    if (verified.user?.id) sessionStorage.setItem("school_user_id", verified.user.id);
+  }
+  const token = typeof window !== "undefined" ? sessionStorage.getItem("school_access_token") : null;
+  const response = await fetch(supabaseEndpoint("/auth/v1/user"), {
+    method: "PUT",
+    headers: supabaseHeaders(token ?? undefined),
+    body: JSON.stringify({ password: newPassword }),
+  });
+  const payload = await response.json().catch(() => null) as { error_description?: string; msg?: string; message?: string } | null;
+  if (!response.ok) throw new Error(payload?.error_description ?? payload?.msg ?? payload?.message ?? "Password could not be changed.");
 }
 
 export async function getCurrentUser() {
