@@ -1,3 +1,4 @@
+
 # School Platform — Agent Execution Plan
 
 Read this whole file before writing any code. Execute steps in order. Do not skip ahead — later steps assume earlier tables/policies exist. Where a step says "definition of done," do not mark it complete until every bullet is true.
