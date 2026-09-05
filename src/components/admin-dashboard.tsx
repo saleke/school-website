@@ -6,18 +6,368 @@ import { AccountDirectory } from "@/components/account-directory";
 import { StaffMonitor } from "@/components/staff-monitor";
 import { ClassManagement } from "@/components/class-management";
 import { AcademicCalendar } from "@/components/academic-calendar";
-type Tab = "pulse" | "attention" | "classes" | "staff" | "resources" | "settings";
-type User = { id: string; name: string; email: string; role: "student" | "teacher" | "admin" | "alumni"; is_librarian: boolean; teacher_approval_status: "pending" | "approved" | "rejected" | null };
-type Named = { id: string; name: string; grade_level?: string; max_capacity?: number | null; class_id?: string; teacher_id?: string; subject_id?: string; day_of_week?: number; start_time?: string; end_time?: string; is_form_teacher?: boolean };
-type ClassOption = { id: string; class_id: string; code: string; form_teacher_id: string | null; is_active: boolean };
-type SessionRow={id:string;name:string;start_date:string;end_date:string}; type TermRow={id:string;session_id:string;name:string;start_date:string;end_date:string;is_active:boolean};
-type Application = { id: string; applicant_name: string; source: string; stage: "applied" | "interviewed" | "accepted" | "enrolled" | "rejected"; created_at: string };
-const tabs: { id: Tab; label: string }[] = [{ id: "pulse", label: "Overview" }, { id: "attention", label: "Attention" }, { id: "classes", label: "Classes" }, { id: "staff", label: "Staff" }, { id: "resources", label: "Resources" }, { id: "settings", label: "Settings" }];
-export function AdminDashboard({ name, onSignOut }: { name: string; onSignOut: () => void }) {
-  const [tab, setTab] = useState<Tab>("pulse"); const [sessions,setSessions]=useState<SessionRow[]>([]); const [terms,setTerms]=useState<TermRow[]>([]); const [users, setUsers] = useState<User[]>([]); const [classes, setClasses] = useState<Named[]>([]); const [options, setOptions] = useState<ClassOption[]>([]); const [subjects, setSubjects] = useState<Named[]>([]); const [schedules, setSchedules] = useState<Named[]>([]); const [applications, setApplications] = useState<Application[]>([]); const [status, setStatus] = useState("Syncing data");
-  useEffect(() => { void (async () => { try { const [u, c, o, s, t, se, te, a] = await Promise.all([supabaseRequest<User[]>("User?select=id,name,email,role,is_librarian,teacher_approval_status&order=name"), supabaseRequest<Named[]>("Class?select=id,name,grade_level,max_capacity&order=grade_level,name"), supabaseRequest<ClassOption[]>("ClassOption?select=id,class_id,code,form_teacher_id,is_active&order=class_id,code"), supabaseRequest<Named[]>("Subject?select=id,name,class_id&order=name"), supabaseRequest<Named[]>("TeachingSchedule?select=id,teacher_id,class_id,class_option_id,subject_id,day_of_week,start_time,end_time,is_form_teacher&order=day_of_week,start_time"), supabaseRequest<SessionRow[]>("Session?select=id,name,start_date,end_date&order=start_date.desc"), supabaseRequest<TermRow[]>("Term?select=id,session_id,name,start_date,end_date,is_active&order=start_date.desc"), supabaseRequest<Application[]>("AdmissionApplication?select=id,applicant_name,source,stage,created_at&order=created_at.desc")]); setUsers(u ?? []); setClasses(c ?? []); setOptions(o ?? []); setSubjects(s ?? []); setSessions(se ?? []); setTerms(te ?? []); setSchedules(t ?? []); setApplications(a ?? []); setStatus(""); } catch (error) { setStatus(error instanceof Error ? error.message : "Dashboard could not sync."); } })(); }, []);
-  const teachers = users.filter(u => u.role === "teacher"); const pending = teachers.filter(u => u.teacher_approval_status === "pending"); const freshApps = applications.filter(a => a.stage === "applied");
-  async function updateUser(id: string, changes: Partial<User>) { try { await supabaseRequest(`User?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(changes) }); setUsers(items => items.map(item => item.id === id ? { ...item, ...changes } : item)); } catch (error) { setStatus(error instanceof Error ? error.message : "Account update failed."); } }
-  async function updateApp(id: string, stage: Application["stage"]) { try { await supabaseRequest(`AdmissionApplication?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ stage, updated_at: new Date().toISOString() }) }); setApplications(items => items.map(item => item.id === id ? { ...item, stage } : item)); } catch (error) { setStatus(error instanceof Error ? error.message : "Application update failed."); } }
-  return <main className="min-h-screen bg-surface-0 pb-24 lg:pb-0"><header className="sticky top-0 z-30 border-b border-[var(--border)] bg-surface-0 px-4 py-3"><div className="mx-auto flex max-w-7xl items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.12em]">School Platform</p><p className="text-xs text-text-secondary">{name} · Owner command center</p></div><button onClick={onSignOut} className="min-h-11 px-3 text-sm font-semibold">Sign out</button></div></header><div className="mx-auto grid max-w-7xl lg:grid-cols-[220px_minmax(0,1fr)_260px]"><aside className="hidden border-r border-[var(--border)] p-5 lg:block"><nav className="space-y-1">{tabs.map(item => <button key={item.id} onClick={() => setTab(item.id)} className={`min-h-11 w-full border-l-2 px-3 text-left text-sm font-semibold ${tab === item.id ? "border-accent" : "border-transparent text-text-secondary"}`}>{item.label}</button>)}</nav></aside><section className="min-w-0 px-4 py-5 sm:px-6 lg:px-8"><h1 className="font-display text-3xl font-semibold">{tab === "pulse" ? "Overview" : tab === "attention" ? "Attention" : tab === "classes" ? "Classes" : tab === "staff" ? "Staff" : tab === "resources" ? "Resources" : "Settings"}</h1>{tab === "pulse" && <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Students", users.filter(u => u.role === "student").length], ["Teachers", teachers.length], ["Applications", freshApps.length], ["Classes", classes.length]].map(([label, value]) => <div key={String(label)} className="border-y border-[var(--border)] bg-surface-1 p-4"><p className="text-xs font-bold uppercase text-text-secondary">{label}</p><p className="mt-2 text-3xl font-bold">{value}</p></div>)}</div>}{tab === "attention" && <div className="mt-6 space-y-3">{pending.map(user => <article key={user.id} className="border-l-4 border-[var(--danger)] bg-surface-1 p-4"><p className="font-semibold">Teacher approval pending</p><p className="text-sm text-text-secondary">{user.name}</p><button onClick={() => void updateUser(user.id, { teacher_approval_status: "approved" })} className="mt-3 min-h-11 text-sm font-semibold text-accent">Approve</button></article>)}{freshApps.map(app => <article key={app.id} className="border-l-4 border-[var(--border)] bg-surface-1 p-4"><p className="font-semibold">New admission application</p><p className="text-sm text-text-secondary">{app.applicant_name} · {app.source}</p><button onClick={() => void updateApp(app.id, "interviewed")} className="mt-3 min-h-11 text-sm font-semibold text-accent">Mark interviewed</button></article>)}{!pending.length && !freshApps.length && <p className="py-10 text-center text-text-secondary">No urgent actions.</p>}</div>}{tab === "staff" && <div className="mt-6"><StaffMonitor teachers={teachers} schedules={schedules as never[]} subjects={subjects as never[]} classes={classes as never[]} options={options} onOptionsChange={setOptions} onSchedulesChange={setSchedules as never} onStatus={setStatus} /></div>}{tab === "classes" && <div className="mt-6 space-y-8"><ClassManagement classes={classes} options={options} users={users} onOptionsChange={setOptions} onStatus={setStatus} /><SubjectManagement classes={classes as never[]} subjects={subjects as never[]} schedules={schedules as never[]} onSubjectsChange={value => setSubjects(value)} onStatus={setStatus} /></div>}{tab === "settings" && <div className="mt-6"><AcademicCalendar sessions={sessions} terms={terms} onSessionsChange={setSessions} onTermsChange={setTerms} onStatus={setStatus} /></div>}{tab === "resources" && <div className="mt-6"><AccountDirectory users={users} onUpdate={(id, changes) => void updateUser(id, changes)} /></div>}</section><aside className="hidden border-l border-[var(--border)] p-5 lg:block"><p className="text-xs font-bold uppercase text-text-secondary">Open queue</p><p className="mt-4 text-3xl font-bold">{pending.length + freshApps.length}</p><button onClick={() => setTab("attention")} className="mt-4 min-h-11 text-sm font-semibold text-accent">Open attention</button></aside></div><nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-[var(--border)] bg-surface-0 lg:hidden">{tabs.map(item => <button key={item.id} onClick={() => setTab(item.id)} className={`min-h-16 text-xs font-bold ${tab === item.id ? "text-accent" : "text-text-secondary"}`}>{item.label}</button>)}</nav>{status && <p className="fixed bottom-16 left-1/2 z-50 -translate-x-1/2 bg-surface-2 px-3 py-1 text-xs lg:bottom-3">{status}</p>}</main>;
+type Tab =
+  "pulse" | "attention" | "classes" | "staff" | "resources" | "settings";
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: "student" | "teacher" | "admin" | "alumni";
+  is_librarian: boolean;
+  teacher_approval_status: "pending" | "approved" | "rejected" | null;
+};
+type Named = {
+  id: string;
+  name: string;
+  grade_level?: string;
+  max_capacity?: number | null;
+  class_id?: string;
+  teacher_id?: string;
+  subject_id?: string;
+  day_of_week?: number;
+  start_time?: string;
+  end_time?: string;
+  is_form_teacher?: boolean;
+};
+type ClassOption = {
+  id: string;
+  class_id: string;
+  code: string;
+  form_teacher_id: string | null;
+  is_active: boolean;
+};
+type SessionRow = {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+};
+type TermRow = {
+  id: string;
+  session_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+};
+type Application = {
+  id: string;
+  applicant_name: string;
+  source: string;
+  stage: "applied" | "interviewed" | "accepted" | "enrolled" | "rejected";
+  created_at: string;
+};
+const tabs: { id: Tab; label: string }[] = [
+  { id: "pulse", label: "Overview" },
+  { id: "attention", label: "Attention" },
+  { id: "classes", label: "Classes" },
+  { id: "staff", label: "Staff" },
+  { id: "resources", label: "Resources" },
+  { id: "settings", label: "Settings" },
+];
+export function AdminDashboard({
+  name,
+  onSignOut,
+}: {
+  name: string;
+  onSignOut: () => void;
+}) {
+  const [tab, setTab] = useState<Tab>("pulse");
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [terms, setTerms] = useState<TermRow[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [classes, setClasses] = useState<Named[]>([]);
+  const [options, setOptions] = useState<ClassOption[]>([]);
+  const [subjects, setSubjects] = useState<Named[]>([]);
+  const [schedules, setSchedules] = useState<Named[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [status, setStatus] = useState("Syncing data");
+  useEffect(() => {
+    void (async () => {
+      try {
+        const requests = await Promise.allSettled([
+          supabaseRequest<User[]>(
+            "User?select=id,name,email,role,is_librarian,teacher_approval_status&order=name",
+          ),
+          supabaseRequest<Named[]>(
+            "Class?select=id,name,grade_level,max_capacity&order=grade_level,name",
+          ),
+          supabaseRequest<ClassOption[]>(
+            "ClassOption?select=id,class_id,code,form_teacher_id,is_active&order=class_id,code",
+          ),
+          supabaseRequest<Named[]>(
+            "Subject?select=id,name,class_id&order=name",
+          ),
+          supabaseRequest<Named[]>(
+            "TeachingSchedule?select=id,teacher_id,class_id,class_option_id,subject_id,day_of_week,start_time,end_time,is_form_teacher&order=day_of_week,start_time",
+          ),
+          supabaseRequest<SessionRow[]>(
+            "Session?select=id,name,start_date,end_date&order=start_date.desc",
+          ),
+          supabaseRequest<TermRow[]>(
+            "Term?select=id,session_id,name,start_date,end_date,is_active&order=start_date.desc",
+          ),
+          supabaseRequest<Application[]>(
+            "AdmissionApplication?select=id,applicant_name,source,stage,created_at&order=created_at.desc",
+          ),
+        ]);
+        const value = <T,>(index: number, fallback: T): T => {
+          const result = requests[index];
+          return result.status === "fulfilled" && result.value ? (result.value as T) : fallback;
+        };
+        setUsers(value<User[]>(0, []));
+        setClasses(value<Named[]>(1, []));
+        setOptions(value<ClassOption[]>(2, []));
+        setSubjects(value<Named[]>(3, []));
+        setSessions(value<SessionRow[]>(5, []));
+        setTerms(value<TermRow[]>(6, []));
+        setSchedules(value<Named[]>(4, []));
+        setApplications(value<Application[]>(7, []));
+        const failures = requests.filter((request) => request.status === "rejected");
+        setStatus(failures.length ? "Some dashboard data could not be loaded. Refresh to retry." : "");
+      } catch (error) {
+        setStatus(
+          error instanceof Error ? error.message : "Dashboard could not sync.",
+        );
+      }
+    })();
+  }, []);
+  const teachers = users.filter((u) => u.role === "teacher");
+  const pending = teachers.filter(
+    (u) => u.teacher_approval_status === "pending",
+  );
+  const freshApps = applications.filter((a) => a.stage === "applied");
+  async function updateUser(id: string, changes: Partial<User>) {
+    try {
+      await supabaseRequest(`User?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(changes),
+      });
+      setUsers((items) =>
+        items.map((item) => (item.id === id ? { ...item, ...changes } : item)),
+      );
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Account update failed.",
+      );
+    }
+  }
+  async function updateApp(id: string, stage: Application["stage"]) {
+    try {
+      await supabaseRequest(
+        `AdmissionApplication?id=eq.${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ stage, updated_at: new Date().toISOString() }),
+        },
+      );
+      setApplications((items) =>
+        items.map((item) => (item.id === id ? { ...item, stage } : item)),
+      );
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Application update failed.",
+      );
+    }
+  }
+  return (
+    <main className="min-h-screen bg-surface-0 pb-24 lg:pb-0">
+      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-surface-0 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.12em]">
+              School Platform
+            </p>
+            <p className="text-xs text-text-secondary">
+              {name} · Owner command center
+            </p>
+          </div>
+          <button
+            onClick={onSignOut}
+            className="min-h-11 px-3 text-sm font-semibold"
+          >
+            Sign out
+          </button>
+        </div>
+      </header>
+      <div className="mx-auto grid max-w-7xl lg:grid-cols-[220px_minmax(0,1fr)_260px]">
+        <aside className="hidden border-r border-[var(--border)] p-5 lg:block">
+          <nav className="space-y-1">
+            {tabs.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setTab(item.id)}
+                className={`min-h-11 w-full border-l-2 px-3 text-left text-sm font-semibold ${tab === item.id ? "border-accent" : "border-transparent text-text-secondary"}`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </aside>
+        <section className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
+          <h1 className="font-display text-3xl font-semibold">
+            {tab === "pulse"
+              ? "Overview"
+              : tab === "attention"
+                ? "Attention"
+                : tab === "classes"
+                  ? "Classes"
+                  : tab === "staff"
+                    ? "Staff"
+                    : tab === "resources"
+                      ? "Resources"
+                      : "Settings"}
+          </h1>
+          {tab === "pulse" && (
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                ["Students", users.filter((u) => u.role === "student").length],
+                ["Teachers", teachers.length],
+                ["Applications", freshApps.length],
+                ["Classes", classes.length],
+              ].map(([label, value]) => (
+                <div
+                  key={String(label)}
+                  className="border-y border-[var(--border)] bg-surface-1 p-4"
+                >
+                  <p className="text-xs font-bold uppercase text-text-secondary">
+                    {label}
+                  </p>
+                  <p className="mt-2 text-3xl font-bold">{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {tab === "attention" && (
+            <div className="mt-6 space-y-3">
+              {pending.map((user) => (
+                <article
+                  key={user.id}
+                  className="border-l-4 border-[var(--danger)] bg-surface-1 p-4"
+                >
+                  <p className="font-semibold">Teacher approval pending</p>
+                  <p className="text-sm text-text-secondary">{user.name}</p>
+                  <button
+                    onClick={() =>
+                      void updateUser(user.id, {
+                        teacher_approval_status: "approved",
+                      })
+                    }
+                    className="mt-3 min-h-11 text-sm font-semibold text-accent"
+                  >
+                    Approve
+                  </button>
+                </article>
+              ))}
+              {freshApps.map((app) => (
+                <article
+                  key={app.id}
+                  className="border-l-4 border-[var(--border)] bg-surface-1 p-4"
+                >
+                  <p className="font-semibold">New admission application</p>
+                  <p className="text-sm text-text-secondary">
+                    {app.applicant_name} · {app.source}
+                  </p>
+                  <button
+                    onClick={() => void updateApp(app.id, "interviewed")}
+                    className="mt-3 min-h-11 text-sm font-semibold text-accent"
+                  >
+                    Mark interviewed
+                  </button>
+                </article>
+              ))}
+              {!pending.length && !freshApps.length && (
+                <p className="py-10 text-center text-text-secondary">
+                  No urgent actions.
+                </p>
+              )}
+            </div>
+          )}
+          {tab === "staff" && (
+            <div className="mt-6">
+              <StaffMonitor
+                teachers={teachers}
+                schedules={schedules as never[]}
+                subjects={subjects as never[]}
+                classes={classes as never[]}
+                options={options}
+                onOptionsChange={setOptions}
+                onSchedulesChange={setSchedules as never}
+                onStatus={setStatus}
+              />
+            </div>
+          )}
+          {tab === "classes" && (
+            <div className="mt-6 space-y-8">
+              <ClassManagement
+                classes={classes}
+                options={options}
+                users={users}
+                onOptionsChange={setOptions}
+                onStatus={setStatus}
+              />
+              <SubjectManagement
+                classes={classes as never[]}
+                subjects={subjects as never[]}
+                schedules={schedules as never[]}
+                onSubjectsChange={(value) => setSubjects(value)}
+                onStatus={setStatus}
+              />
+            </div>
+          )}
+          {tab === "settings" && (
+            <div className="mt-6">
+              <AcademicCalendar
+                sessions={sessions}
+                terms={terms}
+                onSessionsChange={setSessions}
+                onTermsChange={setTerms}
+                onStatus={setStatus}
+              />
+            </div>
+          )}
+          {tab === "resources" && (
+            <div className="mt-6">
+              <AccountDirectory
+                users={users}
+                onUpdate={(id, changes) => void updateUser(id, changes)}
+              />
+            </div>
+          )}
+        </section>
+        <aside className="hidden border-l border-[var(--border)] p-5 lg:block">
+          <p className="text-xs font-bold uppercase text-text-secondary">
+            Open queue
+          </p>
+          <p className="mt-4 text-3xl font-bold">
+            {pending.length + freshApps.length}
+          </p>
+          <button
+            onClick={() => setTab("attention")}
+            className="mt-4 min-h-11 text-sm font-semibold text-accent"
+          >
+            Open attention
+          </button>
+        </aside>
+      </div>
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-[var(--border)] bg-surface-0 lg:hidden">
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setTab(item.id)}
+            className={`min-h-16 text-xs font-bold ${tab === item.id ? "text-accent" : "text-text-secondary"}`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      {status && (
+        <p className="fixed bottom-16 left-1/2 z-50 -translate-x-1/2 bg-surface-2 px-3 py-1 text-xs lg:bottom-3">
+          {status}
+        </p>
+      )}
+    </main>
+  );
 }
