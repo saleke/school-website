@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabaseRequest } from "@/lib/supabase";
 import { SubjectManagement } from "@/components/subject-management";
 import { AccountDirectory } from "@/components/account-directory";
 import { StaffMonitor } from "@/components/staff-monitor";
 import { ClassManagement } from "@/components/class-management";
 import { AcademicCalendar } from "@/components/academic-calendar";
+import { AccountSettings } from "@/components/account-settings";
+import { ProfileOptionsConsole } from "@/components/profile-options-console";
 type Tab =
   "pulse" | "attention" | "classes" | "staff" | "resources" | "settings";
 type User = {
@@ -65,11 +67,29 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "resources", label: "Resources" },
   { id: "settings", label: "Settings" },
 ];
+const tabDescriptions: Record<Tab, string> = {
+  pulse: "A quick read of the school platform today.",
+  attention: "Items that need a decision or follow-up.",
+  classes: "Manage class sections, rosters, and subjects.",
+  staff: "Review schedules and form-teacher assignments.",
+  resources: "Manage accounts and access privileges.",
+  settings: "Set academic sessions, terms, and timing.",
+};
+function tabIcon(id: Tab) {
+  if (id === "pulse") return "⌂";
+  if (id === "attention") return "!";
+  if (id === "classes") return "▦";
+  if (id === "staff") return "◌";
+  if (id === "resources") return "▤";
+  return "⚙";
+}
 export function AdminDashboard({
   name,
+  email,
   onSignOut,
 }: {
   name: string;
+  email: string;
   onSignOut: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("pulse");
@@ -82,6 +102,16 @@ export function AdminDashboard({
   const [schedules, setSchedules] = useState<Named[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [status, setStatus] = useState("Syncing data");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const primaryTabs = tabs.slice(0, 4);
+  const secondaryTabs = tabs.slice(4);
+  useEffect(() => {
+    if (settingsOpen) {
+      settingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [settingsOpen]);
   useEffect(() => {
     void (async () => {
       try {
@@ -132,6 +162,14 @@ export function AdminDashboard({
       }
     })();
   }, []);
+  useEffect(() => {
+    if (!moreOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMoreOpen(false);
+    }
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [moreOpen]);
   const teachers = users.filter((u) => u.role === "teacher");
   const pending = teachers.filter(
     (u) => u.teacher_approval_status === "pending",
@@ -173,41 +211,42 @@ export function AdminDashboard({
     }
   }
   return (
-    <main className="min-h-screen bg-surface-0 pb-24 lg:pb-0">
-      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-surface-0 px-4 py-3">
+    <main className="min-h-screen bg-surface-0 pb-[calc(9rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-surface-0/95 px-4 py-4 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.12em]">
-              School Platform
-            </p>
-            <p className="text-xs text-text-secondary">
-              {name} · Owner command center
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-xl bg-accent text-lg font-bold text-[var(--accent-contrast)]">S</div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.12em]">School Platform</p>
+              <p className="text-xs text-text-secondary">{name} · Owner command center</p>
+            </div>
           </div>
-          <button
-            onClick={onSignOut}
-            className="min-h-11 px-3 text-sm font-semibold"
-          >
-            Sign out
-          </button>
         </div>
       </header>
+      <ProfileOptionsConsole options={[{ label: "Account settings", onSelect: () => setSettingsOpen(true) }, { label: "Sign out", onSelect: onSignOut, destructive: true }]} />
+      {settingsOpen && <div ref={settingsRef} className="scroll-mt-6 mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8"><div className="mb-3"><button type="button" onClick={() => setSettingsOpen(false)} className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-sm font-semibold">Close settings</button></div><AccountSettings name={name} email={email} role="Administrator" /></div>}
       <div className="mx-auto grid max-w-7xl lg:grid-cols-[220px_minmax(0,1fr)_260px]">
         <aside className="hidden border-r border-[var(--border)] p-5 lg:block">
           <nav className="space-y-1">
             {tabs.map((item) => (
               <button
+                type="button"
                 key={item.id}
                 onClick={() => setTab(item.id)}
-                className={`min-h-11 w-full border-l-2 px-3 text-left text-sm font-semibold ${tab === item.id ? "border-accent" : "border-transparent text-text-secondary"}`}
+                aria-current={tab === item.id ? "page" : undefined}
+                className={`flex min-h-12 w-full items-center gap-3 rounded-xl border-l-2 px-3 text-left text-sm font-semibold ${tab === item.id ? "border-accent bg-surface-1 text-text-primary" : "border-transparent text-text-secondary hover:bg-surface-1"}`}
               >
+                <span className={`grid size-8 place-items-center rounded-lg text-sm ${tab === item.id ? "bg-surface-2 text-accent" : "bg-surface-1"}`} aria-hidden="true">{tabIcon(item.id)}</span>
                 {item.label}
               </button>
             ))}
           </nav>
         </aside>
         <section className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
-          <h1 className="font-display text-3xl font-semibold">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Admin command center</p>
+          <h1 className="font-display mt-1 text-3xl font-semibold sm:text-4xl">
             {tab === "pulse"
               ? "Overview"
               : tab === "attention"
@@ -220,8 +259,12 @@ export function AdminDashboard({
                       ? "Resources"
                       : "Settings"}
           </h1>
+          <p className="mt-2 max-w-2xl text-sm text-text-secondary">{tabDescriptions[tab]}</p>
+          </div>
+          {tab === "pulse" && <span className="rounded-full border border-[var(--border)] bg-surface-1 px-3 py-1 text-xs font-semibold text-text-secondary">{new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>}
+          </div>
           {tab === "pulse" && (
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 ["Students", users.filter((u) => u.role === "student").length],
                 ["Teachers", teachers.length],
@@ -230,18 +273,19 @@ export function AdminDashboard({
               ].map(([label, value]) => (
                 <div
                   key={String(label)}
-                  className="border-y border-[var(--border)] bg-surface-1 p-4"
+                  className="rounded-2xl border border-[var(--border)] bg-surface-1 p-4 shadow-[var(--shadow)]"
                 >
-                  <p className="text-xs font-bold uppercase text-text-secondary">
+                  <div className="flex items-start justify-between gap-3"><p className="text-xs font-bold uppercase tracking-[0.1em] text-text-secondary">
                     {label}
-                  </p>
-                  <p className="mt-2 text-3xl font-bold">{value}</p>
+                  </p><span className="text-text-secondary/70" aria-hidden="true">{label === "Students" ? "●" : label === "Teachers" ? "◆" : label === "Applications" ? "✦" : "▦"}</span></div>
+                  <p className="mt-3 text-3xl font-bold">{value}</p>
                 </div>
               ))}
             </div>
           )}
           {tab === "attention" && (
             <div className="mt-6 space-y-3">
+              <div className="rounded-2xl border border-[var(--border)] bg-surface-1 p-4"><p className="text-sm font-semibold">{pending.length + freshApps.length ? `${pending.length + freshApps.length} item${pending.length + freshApps.length === 1 ? "" : "s"} need attention` : "Everything is up to date"}</p><p className="mt-1 text-sm text-text-secondary">Review these items and keep the school moving.</p></div>
               {pending.map((user) => (
                 <article
                   key={user.id}
@@ -338,31 +382,68 @@ export function AdminDashboard({
           )}
         </section>
         <aside className="hidden border-l border-[var(--border)] p-5 lg:block">
-          <p className="text-xs font-bold uppercase text-text-secondary">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">
             Open queue
           </p>
-          <p className="mt-4 text-3xl font-bold">
+          <p className="mt-3 text-4xl font-bold">
             {pending.length + freshApps.length}
           </p>
+          <p className="mt-1 text-sm text-text-secondary">Pending decisions</p>
           <button
             onClick={() => setTab("attention")}
-            className="mt-4 min-h-11 text-sm font-semibold text-accent"
+            className="mt-5 min-h-11 rounded-lg border border-[var(--border)] px-3 text-sm font-semibold text-accent hover:bg-surface-1"
           >
             Open attention
           </button>
         </aside>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-[var(--border)] bg-surface-0 lg:hidden">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setTab(item.id)}
-            className={`min-h-16 text-xs font-bold ${tab === item.id ? "text-accent" : "text-text-secondary"}`}
-          >
-            {item.label}
-          </button>
-        ))}
+      <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden" aria-label="Main navigation">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-2xl border border-[var(--border)] bg-surface-0/95 p-2 shadow-[var(--shadow)] backdrop-blur">
+          {primaryTabs.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              onClick={() => { setTab(item.id); setMoreOpen(false); }}
+              aria-current={tab === item.id ? "page" : undefined}
+              className={`flex min-h-14 flex-col items-center justify-center rounded-xl px-1 text-[11px] font-bold leading-tight ${tab === item.id ? "bg-surface-2 text-accent" : "text-text-secondary hover:bg-surface-1"}`}
+            >
+              <span aria-hidden="true" className="mb-1 text-base">{tabIcon(item.id)}</span>
+              <span>{item.id === "pulse" ? "Home" : item.label}</span>
+            </button>
+          ))}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMoreOpen(value => !value)}
+              aria-expanded={moreOpen}
+              className={`flex min-h-14 w-full flex-col items-center justify-center rounded-xl px-1 text-[11px] font-bold leading-tight ${moreOpen || secondaryTabs.some(item => item.id === tab) ? "bg-surface-2 text-accent" : "text-text-secondary hover:bg-surface-1"}`}
+            >
+              <span aria-hidden="true" className="mb-1 text-base">⋯</span>
+              <span>More</span>
+            </button>
+          </div>
+        </div>
       </nav>
+      {moreOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/25 lg:hidden"
+          role="presentation"
+          onMouseDown={event => { if (event.target === event.currentTarget) setMoreOpen(false); }}
+        >
+          <section className="absolute inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] mx-auto max-w-md overflow-hidden rounded-2xl border border-[var(--border)] bg-surface-0/95 shadow-[var(--shadow)] backdrop-blur-xl" role="dialog" aria-modal="true" aria-label="More admin sections">
+            <div className="flex items-start justify-between border-b border-[var(--border)] bg-surface-1/75 px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">More sections</p>
+                <p className="mt-1 text-sm text-text-secondary">Open less-frequent admin tools.</p>
+              </div>
+              <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close more sections" className="grid size-9 place-items-center rounded-full border border-[var(--border)] text-lg hover:bg-surface-2">×</button>
+            </div>
+            <div className="grid gap-2 p-3">
+              {secondaryTabs.map(item => <button type="button" key={item.id} onClick={() => { setTab(item.id); setMoreOpen(false); }} className={`flex min-h-14 items-center gap-3 rounded-xl px-4 text-left font-semibold ${tab === item.id ? "bg-surface-2 text-accent" : "hover:bg-surface-1"}`}><span className="grid size-9 place-items-center rounded-lg bg-surface-2 text-lg" aria-hidden="true">{item.id === "resources" ? "▤" : "⚙"}</span><span><span className="block">{item.label}</span><span className="mt-0.5 block text-xs font-normal text-text-secondary">{item.id === "resources" ? "Accounts and school resources" : "Academic calendar and terms"}</span></span><span className="ml-auto text-lg text-text-secondary" aria-hidden="true">›</span></button>)}
+            </div>
+          </section>
+        </div>
+      )}
       {status && (
         <p className="fixed bottom-16 left-1/2 z-50 -translate-x-1/2 bg-surface-2 px-3 py-1 text-xs lg:bottom-3">
           {status}
