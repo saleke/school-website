@@ -5,10 +5,11 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare 
+declare
   affected_term_id uuid;
 begin
   if tg_op = 'DELETE' then
+
     affected_term_id := old.term_id;
   else
     affected_term_id := new.term_id;

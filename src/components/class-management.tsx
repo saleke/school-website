@@ -17,6 +17,7 @@ export function ClassManagement({
   onStatus,
   allowSectionSettings = true,
   readOnly = false,
+  formTeacherId,
 }: {
   classes: ClassRow[];
   options: Option[];
@@ -25,6 +26,7 @@ export function ClassManagement({
   onStatus: (value: string) => void;
   allowSectionSettings?: boolean;
   readOnly?: boolean;
+  formTeacherId?: string;
 }) {
   const [classId, setClassId] = useState("");
   const [optionId, setOptionId] = useState("");
@@ -32,7 +34,9 @@ export function ClassManagement({
   const [query, setQuery] = useState("");
   const [resultStudent, setResultStudent] = useState<Student | null>(null);
   const selected = options.find((option) => option.id === optionId);
-  const visibleOptions = readOnly ? options.filter((option) => option.form_teacher_id) : options;
+  const visibleOptions = readOnly
+    ? options.filter((option) => option.form_teacher_id === formTeacherId)
+    : options;
   const classOptions = visibleOptions.filter((option) => option.class_id === classId).sort((a, b) => a.code.localeCompare(b.code));
   const visibleClassIds = new Set(visibleOptions.map((option) => option.class_id));
   const sortedClasses = classes.filter((item) => visibleClassIds.has(item.id)).sort((a, b) => a.name.localeCompare(b.name));
@@ -93,7 +97,7 @@ export function ClassManagement({
         {classId && <>
           <div className="mt-5 flex items-center justify-between"><div><p className="text-sm font-semibold">Sections</p><p className="text-xs text-text-secondary">{classOptions.filter((option) => option.is_active).length} of 4 open</p></div></div>
           <div className="mt-3 grid grid-cols-4 gap-2">{classOptions.map((option) => <button type="button" key={option.id} onClick={() => void open(option)} className={`rounded-lg border p-3 text-center ${optionId === option.id ? "border-accent bg-surface-2" : "border-[var(--border)] bg-surface-0"} ${!option.is_active ? "opacity-45" : ""}`}><span className="block text-xl font-bold">{option.code}</span><span className="text-[10px] uppercase text-text-secondary">{option.is_active ? "Open" : "Closed"}</span></button>)}</div>
-          {allowSectionSettings && <div className="mt-4 flex flex-wrap gap-2">{classOptions.map((option) => <button type="button" key={option.id} onClick={() => void patch(option.id, { is_active: !option.is_active })} className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-xs font-semibold">{option.is_active ? `Close ${option.code}` : `Open ${option.code}`}</button>)}</div>}
+          {allowSectionSettings && <div className="mt-4 flex flex-wrap gap-2">{classOptions.map((option) => <button type="button" key={option.id} onClick={() => { if (option.is_active && !window.confirm(`Close section ${option.code}? Students will no longer be able to use this section.`)) return; void patch(option.id, { is_active: !option.is_active }); }} className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-xs font-semibold">{option.is_active ? `Close ${option.code}` : `Open ${option.code}`}</button>)}</div>}
         </>}
       </div>
       {selected?.is_active && <div className="rounded-xl border border-[var(--border)] bg-surface-1 p-4 sm:p-5">
