@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, signUp } from "@/lib/supabase";
 import { Button, Card } from "@/components/ui";
@@ -19,6 +19,14 @@ export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" |
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("school_access_token")) {
+      router.replace("/portal");
+    }
+  }, [router]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,7 +40,7 @@ export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" |
       if (result.access_token) {
         sessionStorage.setItem("school_access_token", result.access_token);
         if (result.user?.id) sessionStorage.setItem("school_user_id", result.user.id);
-        router.push("/portal");
+        router.replace("/portal");
       } else {
         sessionStorage.removeItem("school_access_token");
         sessionStorage.removeItem("school_user_id");
@@ -50,9 +58,26 @@ export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" |
       <div className="mb-7 flex gap-2" role="group" aria-label="Authentication action"><button type="button" onClick={() => setMode("signup")} className={`rounded-lg px-4 py-2 font-semibold ${mode === "signup" ? "bg-accent text-[var(--accent-contrast)]" : "border border-[var(--border)]"}`}>Create account</button><button type="button" onClick={() => setMode("login")} className={`rounded-lg px-4 py-2 font-semibold ${mode === "login" ? "bg-accent text-[var(--accent-contrast)]" : "border border-[var(--border)]"}`}>Log in</button></div>
       <h2 className="font-display text-3xl font-semibold">{mode === "signup" ? "Who are you?" : "Welcome back"}</h2>
       <div className="mt-5 grid gap-3 sm:grid-cols-2" role="group" aria-label="Choose account type"><button type="button" aria-pressed={role === "student"} onClick={() => setRole("student")} className={`rounded-xl border p-5 text-left transition ${role === "student" ? "border-accent bg-surface-2" : "border-[var(--border)]"}`}><span className="block text-lg font-bold">I&apos;m a Student</span><span className="mt-1 block text-sm text-text-secondary">Learn, practice, and grow.</span></button><button type="button" aria-pressed={role === "teacher"} onClick={() => setRole("teacher")} className={`rounded-xl border p-5 text-left transition ${role === "teacher" ? "border-accent bg-surface-2" : "border-[var(--border)]"}`}><span className="block text-lg font-bold">I&apos;m a Teacher</span><span className="mt-1 block text-sm text-text-secondary">Teacher access starts pending admin approval.</span></button></div>
-      <form className="mt-7 space-y-4" onSubmit={submit}>{mode === "signup" && <div className="grid gap-4 sm:grid-cols-3"><label className="block text-sm font-semibold">First name<input required value={firstName} onChange={e => setFirstName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><label className="block text-sm font-semibold">Middle name <span className="font-normal text-text-secondary">(optional)</span><input value={middleName} onChange={e => setMiddleName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><label className="block text-sm font-semibold">Last name<input required value={lastName} onChange={e => setLastName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label></div>}<label className="block text-sm font-semibold">Email<input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-semibold">Password<input required minLength={8} type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label>{mode === "signup" && <label className="block text-sm font-semibold">Confirm password<input required minLength={8} type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label>}</div><Button type="submit" disabled={busy} className="w-full">{busy ? "Please wait…" : mode === "signup" ? `Create ${role} account` : "Log in"}</Button></form>
+      <form className="mt-7 space-y-4" onSubmit={submit}>{mode === "signup" && <div className="grid gap-4 sm:grid-cols-3"><label className="block text-sm font-semibold">First name<input required value={firstName} onChange={e => setFirstName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><label className="block text-sm font-semibold">Middle name <span className="font-normal text-text-secondary">(optional)</span><input value={middleName} onChange={e => setMiddleName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><label className="block text-sm font-semibold">Last name<input required value={lastName} onChange={e => setLastName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label></div>}<label className="block text-sm font-semibold">Email<input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><div className={`grid gap-4 ${mode === "signup" ? "sm:grid-cols-2" : ""}`}><PasswordField label="Password" value={password} onChange={setPassword} visible={showPassword} onToggle={() => setShowPassword(value => !value)} />{mode === "signup" && <div><PasswordField label="Confirm password" value={confirmPassword} onChange={setConfirmPassword} visible={showConfirmPassword} onToggle={() => setShowConfirmPassword(value => !value)} /><div aria-live="polite" className={`mt-1 min-h-5 text-xs font-semibold ${confirmPassword && password !== confirmPassword ? "text-danger" : "text-success"}`}>{confirmPassword ? password === confirmPassword ? "Passwords match." : "Passwords do not match." : ""}</div></div>}</div><Button type="submit" disabled={busy || (mode === "signup" && password !== confirmPassword)} className="w-full">{busy ? "Please wait…" : mode === "signup" ? `Create ${role} account` : "Log in"}</Button></form>
       {message && <p className="mt-5 rounded-lg border border-[var(--border)] bg-surface-2 p-3 text-sm" role="status">{message}</p>}
-      <p className="mt-6 text-xs text-text-secondary">Admin and alumni accounts are never selectable here. Librarian access is granted later by an admin.</p>
     </Card>
   </div>;
+}
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+  visible,
+  onToggle,
+  required = true,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  visible: boolean;
+  onToggle: () => void;
+  required?: boolean;
+}) {
+  return <label className="block text-sm font-semibold">{label}<div className="relative mt-1"><input required={required} minLength={8} type={visible ? "text" : "password"} value={value} onChange={event => onChange(event.target.value)} className="min-h-12 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 pr-20 py-3" /><button type="button" onClick={onToggle} aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`} className="absolute right-2 top-1/2 min-h-9 -translate-y-1/2 rounded-md px-2 text-xs font-semibold text-text-secondary hover:bg-surface-2">{visible ? "Hide" : "Show"}</button></div></label>;
 }
