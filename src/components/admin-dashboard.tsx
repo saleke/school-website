@@ -212,7 +212,7 @@ export function AdminDashboard({
   }
   return (
     <main className="min-h-screen bg-surface-0 pb-[calc(9rem+env(safe-area-inset-bottom))] lg:pb-0">
-      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-surface-0/95 px-4 py-4 backdrop-blur sm:px-6">
+      <header className="surface-glass sticky top-0 z-30 border-b border-white/10 px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,.16)] backdrop-blur-xl sm:px-6">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="grid size-10 place-items-center rounded-xl bg-accent text-lg font-bold text-[var(--accent-contrast)]">S</div>

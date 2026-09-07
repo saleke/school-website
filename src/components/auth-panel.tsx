@@ -53,7 +53,7 @@ export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" |
   }
 
   return <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[.9fr_1.1fr]">
-    <section className="pt-4 lg:pt-12"><p className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-text-secondary">School Platform</p><h1 className="font-display text-5xl font-semibold leading-tight">Your school identity, in one place.</h1><p className="mt-5 max-w-md text-lg text-text-secondary">Students choose their class later in profile settings. Guardian contacts are optional and never part of signup.</p></section>
+    <section className="pt-4 lg:pt-12"><p className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-text-secondary">School Platform</p><h1 className="font-display text-5xl font-semibold leading-tight">Your school identity, in one place.</h1></section>
     <Card className="p-7 sm:p-9">
       <div className="mb-7 flex gap-2" role="group" aria-label="Authentication action"><button type="button" onClick={() => setMode("signup")} className={`rounded-lg px-4 py-2 font-semibold ${mode === "signup" ? "bg-accent text-[var(--accent-contrast)]" : "border border-[var(--border)]"}`}>Create account</button><button type="button" onClick={() => setMode("login")} className={`rounded-lg px-4 py-2 font-semibold ${mode === "login" ? "bg-accent text-[var(--accent-contrast)]" : "border border-[var(--border)]"}`}>Log in</button></div>
       <h2 className="font-display text-3xl font-semibold">{mode === "signup" ? "Who are you?" : "Welcome back"}</h2>
