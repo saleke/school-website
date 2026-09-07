@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const primaryLinks = [
@@ -24,6 +25,7 @@ function NavIcon({ name }: { name: string }) {
 }
 
 export function PublicSiteNav() {
+  const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -45,19 +47,20 @@ export function PublicSiteNav() {
 
   return (
     <>
-      <nav className="mb-10 hidden items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-surface-0/65 px-3 py-3 shadow-sm backdrop-blur-md sm:flex" aria-label="Main navigation">
-        <Link href="/" className="flex items-center gap-3 rounded-xl px-2 py-1.5">
-          <span className="grid size-10 place-items-center rounded-xl bg-accent text-lg font-bold text-[var(--accent-contrast)] shadow-sm">S</span>
-          <span><span className="font-display block text-lg font-semibold">School Platform</span><span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-text-secondary">School home</span></span>
+      <div className="hidden h-[4.75rem] sm:block" aria-hidden="true" />
+      <nav className="glass-nav glass-nav-fixed left-1/2 top-3 z-40 hidden w-[calc(100%-2rem)] max-w-6xl -translate-x-1/2 items-center justify-between gap-4 px-3 py-2.5 sm:flex" aria-label="Main navigation">
+        <Link href="/" className="glass-brand group flex items-center gap-3 rounded-xl px-2 py-1.5">
+          <span className="glass-brand-mark"><span>S</span></span>
+          <span><span className="font-display block text-lg font-semibold tracking-tight">School Platform</span><span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-text-secondary">School home</span></span>
         </Link>
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1.5">
           {[...primaryLinks, secondaryLinks[0]].map((link) => (
-            <Link key={link.href} href={link.href} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-text-secondary hover:bg-surface-1">
+            <Link key={link.href} href={link.href} className={`glass-nav-link flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold ${pathname === link.href ? "is-active" : ""}`}>
               <NavIcon name={link.icon} />
               {link.label}
             </Link>
           ))}
-          <Link href="/login" className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-surface-1 px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-surface-2">
+          <Link href="/login" className="glass-login flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
             <NavIcon name="login" />
             Log in
           </Link>
@@ -65,9 +68,9 @@ export function PublicSiteNav() {
       </nav>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:hidden" aria-label="Primary navigation">
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-2xl border border-[var(--border)] bg-surface-0/95 p-2 shadow-[var(--shadow)] backdrop-blur">
+        <div className="glass-mobile-nav mx-auto grid max-w-md grid-cols-4 gap-1 p-2">
           {primaryLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="flex min-h-14 flex-col items-center justify-center rounded-xl px-1 text-[11px] font-bold leading-tight text-text-secondary hover:bg-surface-1">
+            <Link key={link.href} href={link.href} className={`relative z-10 flex min-h-14 flex-col items-center justify-center rounded-xl px-1 text-[11px] font-bold leading-tight ${pathname === link.href ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-text-primary" : "text-text-secondary hover:bg-[color-mix(in_srgb,var(--text-primary)_7%,transparent)]"}`}>
               <span aria-hidden="true" className="mb-1"><NavIcon name={link.icon} /></span>
               {link.label}
             </Link>
@@ -76,7 +79,7 @@ export function PublicSiteNav() {
             type="button"
             onClick={() => setMoreOpen(value => !value)}
             aria-expanded={moreOpen}
-            className={`flex min-h-14 flex-col items-center justify-center rounded-xl px-1 text-[11px] font-bold leading-tight ${moreOpen ? "bg-surface-2 text-text-primary" : "text-text-secondary hover:bg-surface-1"}`}
+            className={`relative z-10 flex min-h-14 flex-col items-center justify-center rounded-xl px-1 text-[11px] font-bold leading-tight ${moreOpen ? "bg-surface-2 text-text-primary" : "text-text-secondary hover:bg-[color-mix(in_srgb,var(--text-primary)_7%,transparent)]"}`}
           >
             <span aria-hidden="true" className="mb-1 text-base">⋯</span>
             More

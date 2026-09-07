@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Card } from "@/components/ui";
 import { StudentResultSummary } from "@/components/student-result-summary";
 import { AccountSettings } from "@/components/account-settings";
 import { ProfileOptionsConsole } from "@/components/profile-options-console";
@@ -59,11 +58,11 @@ export function StudentDashboard({
   return (
     <main className="paper-grid min-h-screen px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-5xl space-y-6">
-        <header className="relative overflow-visible rounded-2xl border border-[var(--border)] bg-surface-1 p-4 sm:p-7">
+        <header className="surface-glass accent-edge sticky top-3 z-30 relative overflow-visible rounded-2xl border border-white/10 p-4 shadow-[0_16px_40px_rgba(0,0,0,.2)] backdrop-blur-xl sm:p-7">
           <div className="absolute -right-12 -top-16 size-40 rounded-full bg-surface-2/70" aria-hidden="true" />
           <div className="relative flex flex-wrap items-start justify-between gap-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Student profile</p>
+              <p className="accent-kicker">Student profile</p>
               <h1 className="font-display text-3xl font-semibold sm:text-4xl">Welcome, {profile.name}</h1>
               <p className="mt-2 text-sm text-text-secondary">{student.admission_no ? `Admission No. ${student.admission_no}` : profile.email}</p>
             </div>
@@ -86,10 +85,13 @@ export function StudentDashboard({
 
         {status && <p role="status" className="rounded-lg border border-[var(--border)] bg-surface-2 p-3 text-sm">{status}</p>}
 
-        <section className="grid gap-4 sm:grid-cols-3">
-          <button type="button" onClick={() => setPanel("results")} className="text-left"><Card className="h-full transition hover:bg-surface-2"><p className="text-xs font-bold uppercase tracking-[0.12em] text-text-secondary">Academic</p><h2 className="mt-2 font-display text-xl font-semibold">Assessment record</h2><p className="mt-1 text-sm text-text-secondary">View scores, totals, and averages.</p></Card></button>
-          <button type="button" onClick={() => setPanel("class")} className="text-left"><Card className="h-full transition hover:bg-surface-2"><p className="text-xs font-bold uppercase tracking-[0.12em] text-text-secondary">Placement</p><h2 className="mt-2 font-display text-xl font-semibold">Class details</h2><p className="mt-1 text-sm text-text-secondary">Review your class and section.</p></Card></button>
-          <button type="button" onClick={() => setPanel("profile")} className="text-left"><Card className="h-full transition hover:bg-surface-2"><p className="text-xs font-bold uppercase tracking-[0.12em] text-text-secondary">Account</p><h2 className="mt-2 font-display text-xl font-semibold">Edit profile</h2><p className="mt-1 text-sm text-text-secondary">Update your display name.</p></Card></button>
+        <section>
+          <div className="flex items-end justify-between gap-3"><div><p className="accent-kicker">At a glance</p><h2 className="font-display mt-2 text-2xl font-semibold">Your school day</h2></div><span className="hidden text-sm text-text-secondary sm:block">Choose a space to continue</span></div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <DashboardTile active={panel === "results"} label="Academic" title="Assessment record" description="View scores, totals, and averages." onClick={() => setPanel("results")} />
+            <DashboardTile active={panel === "class"} label="Placement" title="Class details" description="Review your class and section." onClick={() => setPanel("class")} />
+            <DashboardTile active={panel === "profile"} label="Account" title="Edit profile" description="Update your personal details." onClick={() => setPanel("profile")} />
+          </div>
         </section>
 
         {panel && panel !== "options" && <section ref={panelRef} className="scroll-mt-6 rounded-xl border border-[var(--border)] bg-surface-1 p-4 sm:p-6">
@@ -103,6 +105,10 @@ export function StudentDashboard({
       </div>
     </main>
   );
+}
+
+function DashboardTile({ active, label, title, description, onClick }: { active: boolean; label: string; title: string; description: string; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={`group relative overflow-hidden rounded-[var(--radius-md)] border p-5 text-left transition hover:-translate-y-0.5 ${active ? "border-[color-mix(in_srgb,var(--accent-light)_48%,var(--border))] bg-[color-mix(in_srgb,var(--accent)_10%,var(--surface-1))] shadow-[0_14px_30px_color-mix(in_srgb,var(--accent)_12%,transparent)]" : "border-[var(--border)] bg-surface-1 hover:border-[color-mix(in_srgb,var(--accent-light)_32%,var(--border))] hover:bg-surface-2"}`}><span className={`absolute left-0 top-0 h-1 rounded-br-full transition-all ${active ? "w-16 bg-[var(--accent-light)]" : "w-8 bg-[var(--border)] group-hover:w-12 group-hover:bg-[var(--accent-light)]"}`} aria-hidden="true" /><p className={`text-xs font-bold uppercase tracking-[0.12em] ${active ? "text-[var(--accent-light)]" : "text-text-secondary"}`}>{label}</p><h3 className="mt-3 font-display text-xl font-semibold">{title}</h3><p className="mt-1 text-sm leading-6 text-text-secondary">{description}</p><span className="mt-5 block text-sm font-semibold text-[var(--accent-light)]">{active ? "Open now" : "Open space"} <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">→</span></span></button>;
 }
 
 function ReadOnlyDetail({ label, value }: { label: string; value: string }) {
