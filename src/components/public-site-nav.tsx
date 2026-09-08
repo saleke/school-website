@@ -48,27 +48,29 @@ export function PublicSiteNav() {
   return (
     <>
       <div className="hidden h-[4.75rem] sm:block" aria-hidden="true" />
-      <nav className="glass-nav glass-nav-fixed left-1/2 top-3 z-40 hidden w-[calc(100%-2rem)] max-w-6xl -translate-x-1/2 items-center justify-between gap-4 px-3 py-2.5 sm:flex" aria-label="Main navigation">
-        <Link href="/" className="glass-brand group flex items-center gap-3 rounded-xl px-2 py-1.5">
-          <span className="glass-brand-mark"><span>S</span></span>
-          <span><span className="font-display block text-lg font-semibold tracking-tight">School Platform</span><span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-text-secondary">School home</span></span>
-        </Link>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {[...primaryLinks, secondaryLinks[0]].map((link) => (
-            <Link key={link.href} href={link.href} className={`glass-nav-link flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold ${pathname === link.href ? "is-active" : ""}`}>
-              <NavIcon name={link.icon} />
-              {link.label}
-            </Link>
-          ))}
-          <Link href="/login" className="glass-login flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
-            <NavIcon name="login" />
-            Log in
+      <nav className="public-site-nav glass-nav glass-nav-fixed left-0 top-0 z-40 hidden w-full max-w-none items-center justify-center gap-4 border-x-0 px-5 py-2.5 sm:flex" aria-label="Main navigation">
+        <div className="flex w-full max-w-6xl items-center justify-between gap-4">
+          <Link href="/" className="glass-brand group flex items-center gap-3 rounded-xl px-2 py-1.5">
+            <span className="glass-brand-mark"><span>S</span></span>
+            <span><span className="font-display block text-lg font-semibold tracking-tight">School Platform</span><span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-text-secondary">School home</span></span>
           </Link>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[...primaryLinks, secondaryLinks[0]].map((link) => (
+              <Link key={link.href} href={link.href} className={`glass-control glass-nav-link flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold ${pathname === link.href ? "is-active" : ""}`}>
+                <NavIcon name={link.icon} />
+                {link.label}
+              </Link>
+            ))}
+            <Link href="/login" className="glass-login flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+              <NavIcon name="login" />
+              Log in
+            </Link>
+          </div>
         </div>
       </nav>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:hidden" aria-label="Primary navigation">
-        <div className="glass-mobile-nav mx-auto grid max-w-md grid-cols-4 gap-1 p-2">
+      <nav className="fixed inset-x-0 bottom-0 z-40 px-0 pb-[env(safe-area-inset-bottom)] sm:hidden" aria-label="Primary navigation">
+        <div className="public-site-mobile-nav glass-mobile-nav grid w-full grid-cols-4 gap-1 border-x-0 p-2">
           {primaryLinks.map((link) => (
             <Link key={link.href} href={link.href} className={`relative z-10 flex min-h-14 flex-col items-center justify-center rounded-xl px-1 text-[11px] font-bold leading-tight ${pathname === link.href ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-text-primary" : "text-text-secondary hover:bg-[color-mix(in_srgb,var(--text-primary)_7%,transparent)]"}`}>
               <span aria-hidden="true" className="mb-1"><NavIcon name={link.icon} /></span>
@@ -93,17 +95,17 @@ export function PublicSiteNav() {
           role="presentation"
           onMouseDown={event => { if (event.target === event.currentTarget) setMoreOpen(false); }}
         >
-          <section ref={sheetRef} className="absolute inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] mx-auto max-w-md overflow-hidden rounded-2xl border border-[var(--border)] bg-surface-0/95 shadow-[var(--shadow)] backdrop-blur-xl" role="dialog" aria-modal="true" aria-label="More school sections">
-            <div className="flex items-start justify-between border-b border-[var(--border)] bg-surface-1/75 px-5 py-4">
+          <section ref={sheetRef} className="mobile-command-sheet absolute inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] mx-auto max-w-md overflow-hidden rounded-2xl" role="dialog" aria-modal="true" aria-label="More school sections">
+            <div className="mobile-command-heading flex items-start justify-between border-b border-[var(--border)] px-5 py-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">More sections</p>
                 <p className="mt-1 text-sm text-text-secondary">Explore the school and start your journey.</p>
               </div>
               <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close more sections" className="grid size-9 place-items-center rounded-full border border-[var(--border)] text-lg text-text-secondary hover:bg-surface-2">×</button>
             </div>
-            <div className="grid gap-2 p-3">
+            <div className="grid gap-1.5 p-2.5">
               {secondaryLinks.map((link) => (
-                <Link key={link.href} href={link.href} onClick={() => setMoreOpen(false)} className="flex min-h-14 items-center gap-3 rounded-xl px-4 text-left font-semibold hover:bg-surface-1">
+                <Link key={link.href} href={link.href} onClick={() => setMoreOpen(false)} className="mobile-command-item flex min-h-16 items-center gap-3 rounded-xl px-3.5 text-left font-semibold">
                   <span className="grid size-9 place-items-center rounded-lg bg-surface-2 text-text-secondary" aria-hidden="true"><NavIcon name={link.icon} /></span>
                   <span><span className="block">{link.label}</span><span className="mt-0.5 block text-xs font-normal text-text-secondary">{link.description}</span></span>
                   <span className="ml-auto text-lg text-text-secondary" aria-hidden="true">›</span>

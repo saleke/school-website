@@ -40,7 +40,7 @@ export function ProfileOptionsConsole({
   const console = (
     <div
       ref={consoleRef}
-      className="z-50"
+      className="profile-console z-50"
       style={{
         position: "fixed",
         top: "max(1rem, env(safe-area-inset-top))",
@@ -50,26 +50,28 @@ export function ProfileOptionsConsole({
         WebkitTransform: "translateZ(0)",
       }}
     >
-      <div className="relative grid size-16 place-items-center rounded-full border border-[var(--border)] bg-surface-2/55 shadow-[var(--shadow)] backdrop-blur-md">
-        {!open && <span className="pointer-events-none absolute -inset-1 rounded-full border border-accent/30" aria-hidden="true" />}
+      <div className="relative">
         <button
           type="button"
           aria-label={label}
           aria-expanded={open}
           title="Quick actions"
           onClick={() => setOpen(value => !value)}
-          className={`relative grid size-11 place-items-center rounded-full border text-xl font-semibold leading-none shadow-sm transition ${open ? "border-accent bg-accent/90 text-[var(--accent-contrast)]" : "border-[var(--border)] bg-surface-0/75 backdrop-blur-md hover:border-[var(--border)] hover:bg-surface-1/85"}`}
+          className={`profile-console-trigger glass-control relative grid size-12 place-items-center rounded-xl text-lg font-semibold leading-none ${open ? "border-accent bg-accent/90 text-[var(--accent-contrast)]" : ""}`}
         >
-          <span aria-hidden="true">{open ? "×" : "⋯"}</span>
+          <span className="sr-only">{open ? "Close quick actions" : "Open quick actions"}</span>
+          <span className="profile-console-icon" aria-hidden="true">
+            {open ? "×" : "☷"}
+          </span>
         </button>
       </div>
       {open && (
-        <div className="absolute right-0 top-[4.5rem] w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-[var(--border)] bg-surface-0/80 shadow-[var(--shadow)] backdrop-blur-xl" role="menu" aria-label="Quick actions">
-          <div className="border-b border-[var(--border)] bg-surface-1/70 px-4 py-3">
+        <div className="profile-console-panel absolute right-0 top-[calc(100%+0.75rem)] w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl" role="menu" aria-label="Quick actions">
+          <div className="profile-console-heading border-b border-[var(--border)] px-5 py-4">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Quick actions</p>
-            <p className="mt-1 text-xs text-text-secondary">Common account actions</p>
+            <p className="mt-1 text-sm text-text-secondary">Move around your workspace.</p>
           </div>
-          <div className="p-2">
+          <div className="space-y-1 p-2.5">
           {options.map(option => (
             <button
               key={option.label}
@@ -79,12 +81,12 @@ export function ProfileOptionsConsole({
                 setOpen(false);
                 option.onSelect();
               }}
-              className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition hover:bg-surface-1 ${option.destructive ? "mt-2 border-t border-[var(--border)] pt-3 text-danger" : ""}`}
+              className={`profile-console-item flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold ${option.destructive ? "mt-2 border-t border-[var(--border)] pt-3 text-danger" : ""}`}
             >
-              <span className={`grid size-8 shrink-0 place-items-center rounded-lg text-sm ${option.destructive ? "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]" : "bg-surface-2"}`} aria-hidden="true">
+              <span className={`grid size-9 shrink-0 place-items-center rounded-lg text-sm ${option.destructive ? "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]" : "bg-surface-2"}`} aria-hidden="true">
                 {actionIcon(option.label)}
               </span>
-              <span className="min-w-0 flex-1">{option.label}</span>
+              <span className="min-w-0 flex-1"><span className="block">{option.label}</span><span className="mt-0.5 block text-xs font-normal text-text-secondary">{actionDescription(option.label)}</span></span>
               <span className="text-base text-text-secondary" aria-hidden="true">›</span>
             </button>
           ))}
@@ -105,4 +107,14 @@ function actionIcon(label: string) {
   if (normalized.includes("setting")) return "⚙";
   if (normalized.includes("sign out")) return "↪";
   return "•";
+}
+
+function actionDescription(label: string) {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("assessment") || normalized.includes("result")) return "Review academic progress";
+  if (normalized.includes("guardian")) return "Manage emergency contact details";
+  if (normalized.includes("profile")) return "View your personal information";
+  if (normalized.includes("setting")) return "Update account preferences";
+  if (normalized.includes("sign out")) return "End this session securely";
+  return "Open this workspace";
 }

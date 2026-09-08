@@ -8,16 +8,16 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
   const variants: Record<ButtonVariant, string> = {
-    primary: "bg-accent text-[var(--accent-contrast)] shadow-[0_10px_24px_color-mix(in_srgb,var(--accent)_28%,transparent)] hover:-translate-y-0.5 hover:bg-[var(--accent-light)]",
-    secondary: "border border-[var(--border)] bg-surface-2 text-text-primary hover:bg-surface-1",
-    quiet: "border border-transparent text-text-secondary hover:bg-surface-2 hover:text-text-primary",
+    primary: "glass-login",
+    secondary: "glass-control",
+    quiet: "glass-control border-transparent text-text-secondary hover:text-text-primary",
     danger: "border border-[color-mix(in_srgb,var(--danger)_35%,var(--border))] text-danger hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]",
   };
   return <button className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-sm)] px-5 font-semibold ${variants[variant]} disabled:cursor-not-allowed disabled:opacity-45 ${className}`} {...props} />;
 }
 
 export function Card({ className = "", ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={`rounded-[var(--radius-lg)] border border-[var(--border)] bg-surface-1 p-6 shadow-[var(--shadow)] ${className}`} {...props} />;
+  return <div className={`surface-glass rounded-[var(--radius-lg)] p-6 ${className}`} {...props} />;
 }
 
 export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "accent" | "success" | "danger" }) {
