@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, signUp } from "@/lib/supabase";
+import { clearAuthSession, persistAuthSession, signIn, signUp } from "@/lib/supabase";
 import { Button, Card } from "@/components/ui";
 
 type Role = "student" | "teacher";
@@ -38,12 +38,10 @@ export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" |
         ? await signUp(email, password, name, role)
         : await signIn(email, password);
       if (result.access_token) {
-        sessionStorage.setItem("school_access_token", result.access_token);
-        if (result.user?.id) sessionStorage.setItem("school_user_id", result.user.id);
+        persistAuthSession(result);
         router.replace("/portal");
       } else {
-        sessionStorage.removeItem("school_access_token");
-        sessionStorage.removeItem("school_user_id");
+        clearAuthSession();
         setMessage(mode === "signup" && role === "teacher"
           ? "Account created. Confirm your email, then log in to see the admin approval waiting screen."
           : "Account created. Confirm your email, then log in.");
