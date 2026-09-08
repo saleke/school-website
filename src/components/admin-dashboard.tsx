@@ -397,8 +397,8 @@ export function AdminDashboard({
           </button>
         </aside>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden" aria-label="Main navigation">
-        <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-2xl border border-[var(--border)] bg-surface-0/95 p-2 shadow-[var(--shadow)] backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-40 px-0 pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Main navigation">
+        <div className="admin-mobile-nav glass-nav mx-auto grid max-w-md grid-cols-5 gap-1 p-2">
           {primaryTabs.map((item) => (
             <button
               type="button"
@@ -430,16 +430,16 @@ export function AdminDashboard({
           role="presentation"
           onMouseDown={event => { if (event.target === event.currentTarget) setMoreOpen(false); }}
         >
-          <section className="absolute inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] mx-auto max-w-md overflow-hidden rounded-2xl border border-[var(--border)] bg-surface-0/95 shadow-[var(--shadow)] backdrop-blur-xl" role="dialog" aria-modal="true" aria-label="More admin sections">
-            <div className="flex items-start justify-between border-b border-[var(--border)] bg-surface-1/75 px-5 py-4">
+          <section className="mobile-command-sheet absolute inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] mx-auto max-w-md overflow-hidden rounded-2xl" role="dialog" aria-modal="true" aria-label="More admin sections">
+            <div className="mobile-command-heading flex items-start justify-between border-b border-[var(--border)] bg-surface-1/75 px-5 py-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">More sections</p>
                 <p className="mt-1 text-sm text-text-secondary">Open less-frequent admin tools.</p>
               </div>
               <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close more sections" className="grid size-9 place-items-center rounded-full border border-[var(--border)] text-lg hover:bg-surface-2">×</button>
             </div>
-            <div className="grid gap-2 p-3">
-              {secondaryTabs.map(item => <button type="button" key={item.id} onClick={() => { setTab(item.id); setMoreOpen(false); }} className={`flex min-h-14 items-center gap-3 rounded-xl px-4 text-left font-semibold ${tab === item.id ? "bg-surface-2 text-accent" : "hover:bg-surface-1"}`}><span className="grid size-9 place-items-center rounded-lg bg-surface-2 text-lg" aria-hidden="true">{item.id === "resources" ? "▤" : "⚙"}</span><span><span className="block">{item.label}</span><span className="mt-0.5 block text-xs font-normal text-text-secondary">{item.id === "resources" ? "Accounts and school resources" : "Academic calendar and terms"}</span></span><span className="ml-auto text-lg text-text-secondary" aria-hidden="true">›</span></button>)}
+            <div className="grid gap-1.5 p-2.5">
+              {secondaryTabs.map(item => <button type="button" key={item.id} onClick={() => { setTab(item.id); setMoreOpen(false); }} className={`mobile-command-item flex min-h-16 items-center gap-3 rounded-xl px-3.5 text-left font-semibold ${tab === item.id ? "is-selected" : ""}`}><span className="grid size-9 place-items-center rounded-lg bg-surface-2 text-lg" aria-hidden="true">{item.id === "resources" ? "▤" : "⚙"}</span><span><span className="block">{item.label}</span><span className="mt-0.5 block text-xs font-normal text-text-secondary">{item.id === "resources" ? "Accounts and school resources" : "Academic calendar and terms"}</span></span><span className="ml-auto text-lg text-text-secondary" aria-hidden="true">›</span></button>)}
             </div>
           </section>
         </div>

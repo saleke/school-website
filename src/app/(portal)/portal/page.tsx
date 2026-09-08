@@ -12,6 +12,7 @@ import { TeacherHomeDashboard } from "@/components/teacher-home-dashboard";
 import { ClassManagement } from "@/components/class-management";
 import { StudentResultSummary } from "@/components/student-result-summary";
 import { StudentDashboard } from "@/components/student-dashboard";
+import { schoolContent } from "@/content/school";
 
 type Profile = { id: string; name: string; email: string; role: "student" | "teacher" | "admin" | "alumni"; teacher_approval_status: "pending" | "approved" | "rejected" | null };
 type Student = { id: string; user_id: string; admission_no?: string | null; dob?: string | null; class_id: string | null; class_option_id: string | null; class_locked: boolean; name?: string; email?: string; User?: { name?: string; email?: string } | null };
@@ -282,7 +283,7 @@ export default function PortalPage() {
     return `${classA} ${a.code}`.localeCompare(`${classB} ${b.code}`);
   });
 
-  if (status && !profile) return <main className="paper-grid min-h-screen px-5 py-10"><div className="mx-auto max-w-3xl"><nav className="mb-8 flex items-center justify-between"><Link href="/" className="text-sm font-semibold text-text-secondary">Home</Link><button type="button" onClick={signOut} className="text-sm font-semibold text-text-secondary">Sign out</button></nav><Card><p role="status">{status}</p></Card></div></main>;
+  if (status && !profile) return <main className="paper-grid flex min-h-screen items-center px-5 py-10"><div className="mx-auto w-full max-w-md"><section className="portal-loading-card surface-glass rounded-[var(--radius-lg)] p-7 text-center sm:p-9" role="status" aria-live="polite"><div className="portal-loading-mark mx-auto grid size-14 place-items-center rounded-2xl bg-accent text-xl font-bold text-[var(--accent-contrast)] shadow-[0_12px_28px_color-mix(in_srgb,var(--accent)_28%,transparent)]">{schoolContent.identity.shortName[0]}</div><p className="eyebrow mt-6">{schoolContent.identity.name}</p><h1 className="font-display mt-2 text-2xl font-semibold">Preparing your workspace</h1><p className="mt-3 text-sm leading-6 text-text-secondary">{status}</p><div className="portal-loading-track mt-6 h-1.5 overflow-hidden rounded-full bg-surface-2"><span className="portal-loading-progress block h-full w-2/5 rounded-full bg-accent" /></div></section></div></main>;
   if (!profile) return null;
   if ((profile.role as string) === "admin") return <AdminDashboard name={profile.name} email={profile.email} onSignOut={signOut} />;
   if ((profile.role as string) === "teacher" && profile.teacher_approval_status !== "approved") return <main className="paper-grid min-h-screen px-5 py-10"><div className="mx-auto max-w-3xl"><nav className="mb-8 flex items-center justify-between"><Link href="/" className="text-sm font-semibold text-text-secondary">Home</Link></nav><Card><p className="text-sm font-bold uppercase tracking-[0.18em] text-text-secondary">Teacher account</p><h1 className="font-display mt-3 text-4xl font-semibold">Waiting for admin approval</h1><p className="mt-4 text-text-secondary">Your account is active, but your teaching portal stays locked until a school admin approves it. You can log in again anytime to check.</p></Card></div></main>;
