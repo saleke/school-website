@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabaseRequest } from "@/lib/supabase";
 import { TimetableOverview } from "@/components/timetable-overview";
 type Teacher = {
@@ -26,6 +26,33 @@ type Option = {
   is_active: boolean;
 };
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const gradeOrder = new Map([
+  ["JSS1", 1],
+  ["JSS2", 2],
+  ["JSS3", 3],
+  ["SSS1", 4],
+  ["SSS2", 5],
+  ["SSS3", 6],
+]);
+
+function compareClassOptions(
+  a: Option,
+  b: Option,
+  classes: Named[],
+) {
+  const className = (id: string) =>
+    classes.find((item) => item.id === id)?.name.trim().toUpperCase() ?? "";
+  const gradeA = gradeOrder.get(className(a.class_id)) ?? Number.MAX_SAFE_INTEGER;
+  const gradeB = gradeOrder.get(className(b.class_id)) ?? Number.MAX_SAFE_INTEGER;
+
+  if (gradeA !== gradeB) return gradeA - gradeB;
+
+  const classComparison = className(a.class_id).localeCompare(className(b.class_id));
+  if (classComparison !== 0) return classComparison;
+
+  return a.code.localeCompare(b.code, undefined, { numeric: true });
+}
+
 export function StaffMonitor({
   teachers,
   schedules,
@@ -58,7 +85,15 @@ export function StaffMonitor({
   });
   const [loadedSubjects, setLoadedSubjects] = useState<Named[]>([]);
   const [loadedOptions, setLoadedOptions] = useState<Option[]>([]);
-  const scheduleOptions = loadedOptions.length ? loadedOptions : options;
+  const scheduleOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          [...options, ...loadedOptions].map((option) => [option.id, option]),
+        ).values(),
+      ),
+    [loadedOptions, options],
+  );
   useEffect(() => {
     if (view !== "schedule") return;
     const needSections = options.length === 0 && loadedOptions.length === 0;
@@ -163,11 +198,11 @@ export function StaffMonitor({
         headers: { Prefer: "return=minimal" },
         body: JSON.stringify({ form_teacher_id: teacher || null }),
       });
-      onOptionsChange(
-        options.map((x) =>
-          x.id === o.id ? { ...x, form_teacher_id: teacher || null } : x,
-        ),
+      const updated = scheduleOptions.map((x) =>
+        x.id === o.id ? { ...x, form_teacher_id: teacher || null } : x,
       );
+      setLoadedOptions(updated);
+      onOptionsChange(updated);
       onStatus("Form teacher assignment saved.");
     } catch (e) {
       onStatus(e instanceof Error ? e.message : "Assignment failed.");
@@ -378,8 +413,9 @@ export function StaffMonitor({
       )}
       {view === "forms" && (
         <div className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
-          {scheduleOptions
+          {[...scheduleOptions]
             .filter((o) => o.is_active)
+            .sort((a, b) => compareClassOptions(a, b, classes))
             .map((o) => (
               <div
                 key={o.id}

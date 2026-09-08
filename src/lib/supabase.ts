@@ -25,17 +25,88 @@ async function readJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-export type AuthResponse = { access_token?: string; user?: { id: string; email?: string }; error_description?: string; msg?: string };
+export type AuthResponse = {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  user?: { id: string; email?: string };
+  error_description?: string;
+  msg?: string;
+};
+
+const accessTokenKey = "school_access_token";
+const refreshTokenKey = "school_refresh_token";
+const expiresAtKey = "school_token_expires_at";
+let refreshInFlight: Promise<boolean> | null = null;
+
+export function persistAuthSession(session: AuthResponse) {
+  if (typeof window === "undefined" || !session.access_token) return;
+  sessionStorage.setItem(accessTokenKey, session.access_token);
+  if (session.refresh_token) sessionStorage.setItem(refreshTokenKey, session.refresh_token);
+  if (session.user?.id) sessionStorage.setItem("school_user_id", session.user.id);
+  if (session.expires_in) {
+    sessionStorage.setItem(expiresAtKey, String(Date.now() + session.expires_in * 1000));
+  }
+}
+
+export function clearAuthSession() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(accessTokenKey);
+  sessionStorage.removeItem(refreshTokenKey);
+  sessionStorage.removeItem(expiresAtKey);
+  sessionStorage.removeItem("school_user_id");
+}
+
+async function refreshAuthSession() {
+  if (typeof window === "undefined") return false;
+  const refreshToken = sessionStorage.getItem(refreshTokenKey);
+  if (!refreshToken) return false;
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    try {
+      const response = await fetch(supabaseEndpoint("/auth/v1/token?grant_type=refresh_token"), {
+        method: "POST",
+        headers: supabaseHeaders(),
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null) as AuthResponse | null;
+      if (!response.ok || !payload?.access_token) {
+        clearAuthSession();
+        return false;
+      }
+      persistAuthSession(payload);
+      return true;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
+}
+
+async function ensureFreshAuthSession() {
+  if (typeof window === "undefined") return;
+  const expiresAt = Number(sessionStorage.getItem(expiresAtKey) ?? 0);
+  if (expiresAt && expiresAt - Date.now() < 30_000) {
+    await refreshAuthSession();
+  }
+}
 
 export async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
-  const token = typeof window !== "undefined" ? sessionStorage.getItem("school_access_token") ?? undefined : undefined;
-  const response = await fetch(supabaseEndpoint(`/rest/v1/${path}`), {
-    ...init,
-    cache: "no-store",
-    headers: { ...supabaseHeaders(token), ...(init.headers ?? {}) },
-  });
-  const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
-  if (!response.ok) throw new Error((payload as { message?: string } | null)?.message ?? "Supabase request failed.");
+  await ensureFreshAuthSession();
+  async function request() {
+    const token = typeof window !== "undefined" ? sessionStorage.getItem(accessTokenKey) ?? undefined : undefined;
+    return fetch(supabaseEndpoint(`/rest/v1/${path}`), {
+      ...init,
+      cache: "no-store",
+      headers: { ...supabaseHeaders(token), ...(init.headers ?? {}) },
+    });
+  }
+  let response = await request();
+  if (response.status === 401 && await refreshAuthSession()) response = await request();
+  const payload = (await response.json().catch(() => null)) as T | { message?: string; msg?: string } | null;
+  if (!response.ok) throw new Error((payload as { message?: string; msg?: string } | null)?.message ?? (payload as { message?: string; msg?: string } | null)?.msg ?? "Supabase request failed.");
   return payload as T;
 }
 
@@ -54,8 +125,7 @@ export async function signUp(email: string, password: string, name: string, role
 export async function signIn(email: string, password: string) {
   if (!supabaseUrl || !supabaseKey) throw new Error("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, then restart the dev server.");
   if (typeof window !== "undefined") {
-    sessionStorage.removeItem("school_access_token");
-    sessionStorage.removeItem("school_user_id");
+    clearAuthSession();
   }
 
   const response = await fetch(supabaseEndpoint("/auth/v1/token?grant_type=password"), {
@@ -86,8 +156,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
     throw new Error(verified.error_description ?? verified.msg ?? "Current password is incorrect.");
   }
   if (typeof window !== "undefined") {
-    sessionStorage.setItem("school_access_token", verified.access_token);
-    if (verified.user?.id) sessionStorage.setItem("school_user_id", verified.user.id);
+    persistAuthSession(verified);
   }
   const token = typeof window !== "undefined" ? sessionStorage.getItem("school_access_token") : null;
   const response = await fetch(supabaseEndpoint("/auth/v1/user"), {
@@ -100,12 +169,18 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 export async function getCurrentUser() {
-  const token = typeof window !== "undefined" ? sessionStorage.getItem("school_access_token") : null;
-  if (!token) return null;
-  const response = await fetch(supabaseEndpoint("/auth/v1/user"), {
-    headers: supabaseHeaders(token),
-    cache: "no-store",
-  });
-  if (!response.ok) return null;
+  if (typeof window === "undefined") return null;
+  await ensureFreshAuthSession();
+  async function request() {
+    const token = sessionStorage.getItem(accessTokenKey);
+    if (!token) return null;
+    return fetch(supabaseEndpoint("/auth/v1/user"), {
+      headers: supabaseHeaders(token),
+      cache: "no-store",
+    });
+  }
+  let response = await request();
+  if (response?.status === 401 && await refreshAuthSession()) response = await request();
+  if (!response?.ok) return null;
   return (await response.json()) as { id: string; email?: string };
 }

@@ -3,21 +3,21 @@
 set -e
 
 # ============================================================
-# Lumosel + Claude Code / Codex Setup Script
+# AgentRouter + Claude Code / Codex Setup Script
 # macOS / Linux
 # ============================================================
 
 clear
 
 echo "============================================================"
-echo "        Lumosel AI Gateway Setup"
+echo "        AgentRouter CLI Setup"
 echo "============================================================"
 echo
 echo "This script will:"
 echo "  1. Install NVM"
 echo "  2. Install Node.js 22"
 echo "  3. Install Claude Code or Codex"
-echo "  4. Apply your custom Lumosel API Profile"
+echo "  4. Configure AgentRouter"
 echo
 echo "============================================================"
 echo
@@ -88,7 +88,7 @@ else
     echo "Installing NVM..."
     echo
 
-    curl -o- https://githubusercontent.com | bash \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.6/install.sh | bash \
         || error_exit "NVM installation failed."
 
     echo
@@ -185,7 +185,7 @@ while true; do
 done
 
 # ------------------------------------------------------------
-# Claude Code / Codex Installation
+# Claude Code
 # ------------------------------------------------------------
 
 if [ "$CLI" = "claude" ]; then
@@ -203,88 +203,269 @@ if [ "$CLI" = "claude" ]; then
     echo "Claude Code version:"
     claude --version || error_exit "Claude Code was installed but could not be executed."
 
-else
+    # --------------------------------------------------------
+    # AgentRouter API key
+    # --------------------------------------------------------
+
+    echo
+    echo "============================================================"
+    echo "AgentRouter Configuration"
+    echo "============================================================"
+    echo
+    echo "Paste your AgentRouter API key."
+    echo "Spaces will automatically be removed."
+    echo
+
+    while true; do
+        read -r -s -p "AgentRouter API key: " AGENTROUTER_KEY
+        echo
+
+        # Remove all whitespace.
+        AGENTROUTER_KEY="$(printf '%s' "$AGENTROUTER_KEY" | tr -d '[:space:]')"
+
+        if [ -n "$AGENTROUTER_KEY" ]; then
+            break
+        fi
+
+        echo "The API key cannot be empty."
+        echo
+    done
+
+    # --------------------------------------------------------
+    # Select Claude model
+    # --------------------------------------------------------
+
+    echo
+    echo "============================================================"
+    echo "Select your Claude model"
+    echo "============================================================"
+    echo
+    echo "1) claude-opus-4-6"
+    echo "2) claude-opus-4-7"
+    echo "3) claude-opus-4-8"
+    echo "4) claude-opus-4-9"
+    echo "5) claude-opus-5"
+    echo
+
+    while true; do
+        read -r -p "Enter your choice [1-5]: " MODEL_CHOICE
+
+        case "$MODEL_CHOICE" in
+            1)
+                ANTHROPIC_MODEL="claude-opus-4-6"
+                break
+                ;;
+            2)
+                ANTHROPIC_MODEL="claude-opus-4-7"
+                break
+                ;;
+            3)
+                ANTHROPIC_MODEL="claude-opus-4-8"
+                break
+                ;;
+            4)
+                ANTHROPIC_MODEL="claude-opus-4-9"
+                break
+                ;;
+            5)
+                ANTHROPIC_MODEL="claude-opus-5"
+                break
+                ;;
+            *)
+                echo "Invalid choice. Please enter a number from 1 to 5."
+                ;;
+        esac
+    done
+
+    # --------------------------------------------------------
+    # Configure Claude Code environment variables
+    # --------------------------------------------------------
+
+    echo
+    echo "Configuring Claude Code..."
+    echo
+
+    # Remove previously generated AgentRouter configuration
+    # so running this script again does not create duplicates.
+    if [ -f "$SHELL_CONFIG" ]; then
+        TMP_CONFIG="$(mktemp)"
+
+        awk '
+        BEGIN { skip=0 }
+
+        /^# >>> AgentRouter Claude Code Configuration >>>$/ {
+            skip=1
+            next
+        }
+
+        /^# <<< AgentRouter Claude Code Configuration <<<$ / {
+            skip=0
+            next
+        }
+
+        skip == 0 {
+            print
+        }
+        ' "$SHELL_CONFIG" > "$TMP_CONFIG" 2>/dev/null || cp "$SHELL_CONFIG" "$TMP_CONFIG"
+
+        mv "$TMP_CONFIG" "$SHELL_CONFIG"
+    fi
+
+    cat >> "$SHELL_CONFIG" <<EOF
+
+# >>> AgentRouter Claude Code Configuration >>>
+export ANTHROPIC_AUTH_TOKEN="$AGENTROUTER_KEY"
+export ANTHROPIC_BASE_URL="https://agentrouter.org"
+export ANTHROPIC_MODEL="$ANTHROPIC_MODEL"
+# <<< AgentRouter Claude Code Configuration <<<
+EOF
+
+    # Apply the settings immediately to this shell.
+    export ANTHROPIC_AUTH_TOKEN="$AGENTROUTER_KEY"
+    export ANTHROPIC_BASE_URL="https://agentrouter.org"
+    export ANTHROPIC_MODEL="$ANTHROPIC_MODEL"
+
+    echo "Claude Code configuration completed."
+    echo
+    echo "ANTHROPIC_BASE_URL = $ANTHROPIC_BASE_URL"
+    echo "ANTHROPIC_MODEL    = $ANTHROPIC_MODEL"
+    echo "ANTHROPIC_AUTH_TOKEN has been configured."
+fi
+
+# ------------------------------------------------------------
+# Codex
+# ------------------------------------------------------------
+
+if [ "$CLI" = "codex" ]; then
+
     echo
     echo "============================================================"
     echo "Installing Codex"
     echo "============================================================"
     echo
-    npm install -g codex || error_exit "Codex installation failed."
-fi
 
-# --------------------------------------------------------
-# Set Custom Lumosel Settings Variables
-# --------------------------------------------------------
+    npm install -g @openai/codex@latest \
+        || error_exit "Codex installation failed."
 
-ANTHROPIC_BASE_URL="https://api.lumosel.vip"
-ANTHROPIC_AUTH_TOKEN="lumo_live_7b6d4c1015d73732e2ea482bb0e5fa4fd33bfba8"
-ANTHROPIC_MODEL="claude-opus-5"
-ANTHROPIC_SMALL_FAST_MODEL="claude-sonnet-4.5"
+    echo
+    echo "Codex version:"
+    codex --version || error_exit "Codex was installed but could not be executed."
 
-# --------------------------------------------------------
-# Configure Official Lumosel JSON settings.json Structure
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # AgentRouter API key
+    # --------------------------------------------------------
 
-echo
-echo "Configuring Claude Code JSON settings..."
-echo
+    echo
+    echo "============================================================"
+    echo "AgentRouter Configuration"
+    echo "============================================================"
+    echo
+    echo "Paste your AgentRouter API key."
+    echo "Spaces will automatically be removed."
+    echo
 
-CLAUDE_SETTINGS_DIR="$HOME/.claude"
-CLAUDE_SETTINGS_FILE="$CLAUDE_SETTINGS_DIR/settings.json"
+    while true; do
+        read -r -s -p "AgentRouter API key: " AGENTROUTER_KEY
+        echo
 
-# Ensure directory structure exists
-mkdir -p "$CLAUDE_SETTINGS_DIR"
+        # Remove all whitespace.
+        AGENTROUTER_KEY="$(printf '%s' "$AGENTROUTER_KEY" | tr -d '[:space:]')"
 
-# Backup existing file if present
-if [ -f "$CLAUDE_SETTINGS_FILE" ]; then
-    cp "$CLAUDE_SETTINGS_FILE" "${CLAUDE_SETTINGS_FILE}.bak"
-fi
+        if [ -n "$AGENTROUTER_KEY" ]; then
+            break
+        fi
 
-# Apply the strict parameters required for the Lumosel Gateway
-cat << EOF > "$CLAUDE_SETTINGS_FILE"
-{
-  "env": {
-    "ANTHROPIC_BASE_URL": "${ANTHROPIC_BASE_URL}",
-    "ANTHROPIC_AUTH_TOKEN": "${ANTHROPIC_AUTH_TOKEN}",
-    "ANTHROPIC_MODEL": "${ANTHROPIC_MODEL}",
-    "ANTHROPIC_SMALL_FAST_MODEL": "${ANTHROPIC_SMALL_FAST_MODEL}"
-  }
-}
+        echo "The API key cannot be empty."
+        echo
+    done
+
+    # --------------------------------------------------------
+    # Create ~/.codex/config.toml
+    # --------------------------------------------------------
+
+    CODEX_DIR="$HOME/.codex"
+    CODEX_CONFIG="$CODEX_DIR/config.toml"
+
+    mkdir -p "$CODEX_DIR" \
+        || error_exit "Could not create $CODEX_DIR."
+
+    # If an existing config exists, make a backup before replacing it.
+    if [ -f "$CODEX_CONFIG" ]; then
+        BACKUP_FILE="$CODEX_CONFIG.backup.$(date +%Y%m%d_%H%M%S)"
+
+        cp "$CODEX_CONFIG" "$BACKUP_FILE" \
+            || error_exit "Could not back up the existing Codex configuration."
+
+        echo
+        echo "Existing Codex configuration backed up to:"
+        echo "$BACKUP_FILE"
+    fi
+
+    cat > "$CODEX_CONFIG" <<EOF
+model = "gpt-5.6-sol"
+model_provider = "agentrouter"
+
+[model_providers.agentrouter]
+name = "AgentRouter"
+base_url = "https://agentrouter.org/v1"
+wire_api = "responses"
+requires_openai_auth = false
+experimental_bearer_token = "$AGENTROUTER_KEY"
 EOF
 
-# --------------------------------------------------------
-# Configure Environment Variables in Shell Config Profile
-# --------------------------------------------------------
-
-echo "Configuring environment variables in $SHELL_CONFIG..."
-echo
-
-# Remove existing config block to avoid overlapping configuration rows
-if [ -f "$SHELL_CONFIG" ]; then
-    sed -i.bak '/# AgentRouter Config/,/# End AgentRouter Config/d' "$SHELL_CONFIG" 2>/dev/null || \
-    sed -i '' '/# AgentRouter Config/,/# End AgentRouter Config/d' "$SHELL_CONFIG" 2>/dev/null || true
-   
-    sed -i.bak '/# Lumosel Config/,/# End Lumosel Config/d' "$SHELL_CONFIG" 2>/dev/null || \
-    sed -i '' '/# Lumosel Config/,/# End Lumosel Config/d' "$SHELL_CONFIG" 2>/dev/null || true
+    echo
+    echo "Codex configuration created:"
+    echo "$CODEX_CONFIG"
 fi
 
-# Write environment configuration tags to system shell profile
-cat << EOF >> "$SHELL_CONFIG"
+# ------------------------------------------------------------
+# Final verification
+# ------------------------------------------------------------
 
-# Lumosel Config
-export ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL}"
-export ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN}"
-export ANTHROPIC_MODEL="${ANTHROPIC_MODEL}"
-export ANTHROPIC_SMALL_FAST_MODEL="${ANTHROPIC_SMALL_FAST_MODEL}"
-# End Lumosel Config
-EOF
-
-echo "============================================================"
-echo "Lumosel Integration Complete!"
-echo "============================================================"
-echo "1. Saved parameters to: $CLAUDE_SETTINGS_FILE"
-echo "2. Fixed shell configuration syntax inside: $SHELL_CONFIG"
 echo
-echo "To initialize the gateway config right away, execute:"
-echo "   source $SHELL_CONFIG"
 echo "============================================================"
+echo "                 SETUP COMPLETE"
+echo "============================================================"
+echo
+
+echo "Node.js:"
+node -v
+
+echo
+echo "npm:"
+npm -v
+
+echo
+
+if [ "$CLI" = "claude" ]; then
+    echo "Claude Code:"
+    claude --version
+
+    echo
+    echo "AgentRouter model:"
+    echo "$ANTHROPIC_MODEL"
+
+    echo
+    echo "Claude Code is configured to use:"
+    echo "$ANTHROPIC_BASE_URL"
+
+    echo
+    echo "Configuration saved to:"
+    echo "$SHELL_CONFIG"
+
+elif [ "$CLI" = "codex" ]; then
+    echo "Codex:"
+    codex --version
+
+    echo
+    echo "Codex configuration:"
+    echo "$CODEX_CONFIG"
+fi
+
+echo
+echo "============================================================"
+echo "Everything completed successfully."
+echo "============================================================"
+echo
+echo "You may now use your selected CLI."
+echo

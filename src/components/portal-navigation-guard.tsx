@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { clearAuthSession } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 export function PortalNavigationGuard() {
@@ -13,8 +14,7 @@ export function PortalNavigationGuard() {
       window.history.pushState({ portalEntry: true }, "", window.location.href);
       if (!window.confirm("Leave the school portal? Your session will remain signed in.")) return;
 
-      sessionStorage.removeItem("school_access_token");
-      sessionStorage.removeItem("school_user_id");
+      clearAuthSession();
       router.replace("/");
     }
 

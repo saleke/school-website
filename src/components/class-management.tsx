@@ -68,13 +68,20 @@ export function ClassManagement({
 
   async function move(student: Student, target: string | null) {
     try {
-      const targetOption = target ? options.find((option) => option.id === target) : null;
-      await supabaseRequest(`Student?id=eq.${student.id}`, {
-        method: "PATCH",
-        headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({ class_id: targetOption?.class_id ?? undefined, class_option_id: target }),
-      });
-      setStudents((current) => current.map((item) => item.id === student.id ? { ...item, class_option_id: target } : item));
+      const updated = await supabaseRequest<Student>(
+        target
+          ? "rpc/admin_assign_student_to_section"
+          : "rpc/admin_remove_student_from_class",
+        {
+          method: "POST",
+          body: JSON.stringify(
+            target
+              ? { target_student_id: student.id, target_class_option_id: target }
+              : { target_student_id: student.id },
+          ),
+        },
+      );
+      setStudents((current) => current.map((item) => item.id === student.id ? { ...item, ...updated } : item));
       onStatus(target ? "Student added." : "Student removed.");
     } catch (error) {
       onStatus(error instanceof Error ? error.message : "Roster update failed.");

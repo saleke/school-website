@@ -24,7 +24,44 @@ export function ScoreEntryGrid({ students, assessments, termId, subjectId }: { s
   const orderedAssessments = sortAssessments(assessments);
   const studentName = (student: Student) => student.name ?? student.User?.name ?? student.user_id;
   const orderedStudents = [...students].sort((a, b) => studentName(a).localeCompare(studentName(b)));
-  useEffect(() => { void (async () => { try { const scores = await supabaseRequest<{ student_id: string; assessment_type_id: string; raw_score: number }[]>(`Score?subject_id=eq.${encodeURIComponent(subjectId)}&term_id=eq.${encodeURIComponent(termId)}&select=student_id,assessment_type_id,raw_score`); const next: Record<string, string> = {}; (scores ?? []).forEach(score => { next[`${score.student_id}:${score.assessment_type_id}`] = String(score.raw_score); }); setValues(next); } catch { /* empty grid is valid for a new term */ } })(); }, [subjectId, termId]);
+  useEffect(() => {
+    if (!subjectId || !termId || !students.length) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        type ScoreRow = { student_id: string; assessment_type_id: string; raw_score: number };
+        const studentIds = students.map((student) => student.id).join(",");
+        let scores = await supabaseRequest<ScoreRow[]>(
+          `Score?subject_id=eq.${encodeURIComponent(subjectId)}&term_id=eq.${encodeURIComponent(termId)}&student_id=in.(${studentIds})&select=student_id,assessment_type_id,raw_score`,
+        );
+        if (!scores?.length) {
+          const rows = await Promise.all(
+            students.map((student) =>
+              supabaseRequest<ScoreRow[]>(
+                `Score?student_id=eq.${encodeURIComponent(student.id)}&subject_id=eq.${encodeURIComponent(subjectId)}&term_id=eq.${encodeURIComponent(termId)}&select=student_id,assessment_type_id,raw_score`,
+              ),
+            ),
+          );
+          scores = rows.flat();
+        }
+        if (cancelled) return;
+        const next: Record<string, string> = {};
+        (scores ?? []).forEach((score) => {
+          next[`${score.student_id}:${score.assessment_type_id}`] = String(score.raw_score);
+        });
+        setValues(next);
+        setMessage("");
+      } catch (error) {
+        if (!cancelled) {
+          setValues({});
+          setMessage(error instanceof Error ? error.message : "Previously saved scores could not be loaded.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [students, subjectId, termId]);
   async function save(studentId: string, assessment: Assessment, raw: string) {
     const key = `${studentId}:${assessment.id}`;
     const value = Number(raw);

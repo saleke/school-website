@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui";
-import { getCurrentUser, supabaseRequest } from "@/lib/supabase";
+import { clearAuthSession, getCurrentUser, supabaseRequest } from "@/lib/supabase";
 import { AdminCreationForm } from "@/components/admin-creation-form";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { ScoreEntryGrid } from "@/components/score-entry-grid";
@@ -59,8 +59,7 @@ export default function PortalPage() {
 
   function signOut() {
     if (!window.confirm("Sign out of your school account?")) return;
-    sessionStorage.removeItem("school_access_token");
-    sessionStorage.removeItem("school_user_id");
+    clearAuthSession();
     router.push("/");
   }
 
@@ -310,7 +309,7 @@ export default function PortalPage() {
           </select>
         </label>
       </div>}
-      {scoreContext?.subjectId && scoreContext.assessments.length > 0 && <div className="mt-5 overflow-x-auto"><p className="mb-2 text-sm text-text-secondary">{scoreContext.subjectName} · {scoreContext.students.length} students · scores save when you leave a cell.</p><ScoreEntryGrid students={scoreContext.students} assessments={scoreContext.assessments} termId={scoreContext.termId} subjectId={scoreContext.subjectId} /></div>}{scoreContext?.students.length ? <div className="mt-5 space-y-3"><label className="block text-sm font-semibold">View a student result<select value={resultStudentId} onChange={e=>setResultStudentId(e.target.value)} className="mt-2 min-h-11 w-full max-w-sm rounded-lg border border-[var(--border)] bg-surface-0 px-3">      <option value="">Select student</option>{scoreContext.students.map(item=><option key={item.id} value={item.id}>{item.name ?? item.User?.name ?? item.email ?? item.User?.email ?? item.user_id}</option>)}</select></label>{resultStudentId && <StudentResultSummary studentId={resultStudentId} studentName={scoreContext.students.find(item=>item.id===resultStudentId)?.name ?? scoreContext.students.find(item=>item.id===resultStudentId)?.User?.name} />}</div> : null}</Card></section>}
+      {scoreContext?.subjectId && scoreContext.assessments.length > 0 && <div className="mt-5 overflow-x-auto"><p className="mb-2 text-sm text-text-secondary">{scoreContext.subjectName} · {scoreContext.students.length} students · scores save when you leave a cell.</p><ScoreEntryGrid key={`${scoreContext.classOptionId}:${scoreContext.subjectId}:${scoreContext.termId}`} students={scoreContext.students} assessments={scoreContext.assessments} termId={scoreContext.termId} subjectId={scoreContext.subjectId} /></div>}{scoreContext?.students.length ? <div className="mt-5 space-y-3"><label className="block text-sm font-semibold">View a student result<select value={resultStudentId} onChange={e=>setResultStudentId(e.target.value)} className="mt-2 min-h-11 w-full max-w-sm rounded-lg border border-[var(--border)] bg-surface-0 px-3">      <option value="">Select student</option>{scoreContext.students.map(item=><option key={item.id} value={item.id}>{item.name ?? item.User?.name ?? item.email ?? item.User?.email ?? item.user_id}</option>)}</select></label>{resultStudentId && <StudentResultSummary studentId={resultStudentId} studentName={scoreContext.students.find(item=>item.id===resultStudentId)?.name ?? scoreContext.students.find(item=>item.id===resultStudentId)?.User?.name} />}</div> : null}</Card></section>}
     {!assessmentOpen && profile.role === "teacher" && <section className="border-t border-[var(--border)] bg-surface-0 px-4 py-6 sm:px-6 sm:py-8" aria-label="Manage class roster">
       <Card className="mx-auto max-w-6xl p-4 sm:p-6">
         <div className="mb-5"><p className="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Students</p><h2 className="font-display mt-1 text-2xl font-semibold">Students in your sections</h2><p className="mt-1 text-sm text-text-secondary">Review students and open their individual results. Class placement is managed by administrators.</p></div>
