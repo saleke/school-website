@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
+import { buildAssignmentQuery } from "@/lib/queries/assignments";
 import { supabaseRequest } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
@@ -43,33 +44,10 @@ export function AssignmentBoard({
     let cancelled = false;
     void (async () => {
       try {
-        const select = "select=id,title,description,subject_id,class_id,class_option_id,teacher_id,due_date,max_score,created_at,Subject(name),User(name)&order=due_date.desc&limit=20";
-        let query: string;
-        if (role === "student") {
-          // Scope students to their exact section. Previously this filtered on
-          // class_id alone, so every section in a year saw the same
-          // assignments regardless of which one the student belonged to.
-          if (classOptionId) {
-            // Logic trees need PostgREST's dotted form (`column.eq.value`),
-            // not the `column=eq.value` used by plain filters. Mixing the two
-            // is a PGRST100 parse error, which surfaces as an empty list plus
-            // an error toast rather than an obvious failure.
-            const scope = `class_option_id.eq.${encodeURIComponent(classOptionId)}`;
-            const withinClass = classId
-              ? `and(${scope},class_id.eq.${encodeURIComponent(classId)})`
-              : scope;
-            // The student's own section, plus anything aimed at the whole class.
-            query = `Assignment?or=(${withinClass},class_option_id.is.null)&${select}`;
-          } else if (classId) {
-            query = `Assignment?class_id=eq.${encodeURIComponent(classId)}&${select}`;
-          } else {
-            query = `Assignment?${select}`;
-          }
-        } else if (role === "teacher" && teacherId) {
-          query = `Assignment?teacher_id=eq.${encodeURIComponent(teacherId)}&${select}`;
-        } else {
-          query = `Assignment?${select}`;
-        }
+        // Query construction lives in lib/queries so it can be unit-tested
+        // without a database. See that file for why the dotted filter form
+        // matters.
+        const query = buildAssignmentQuery({ role, classId, classOptionId, teacherId });
         const rows = await supabaseRequest<Assignment[]>(query);
         if (!cancelled) setAssignments(rows ?? []);
       } catch (error) {
