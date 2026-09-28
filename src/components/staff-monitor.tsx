@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { supabaseRequest } from "@/lib/supabase";
+import { filterValue } from "@/lib/postgrest";
 import { TimetableOverview } from "@/components/timetable-overview";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 type Teacher = {
@@ -157,7 +158,7 @@ export function StaffMonitor({
         end_time: form.end,
       };
       const rows = await supabaseRequest<Row[]>(
-        edit ? `TeachingSchedule?id=eq.${edit.id}` : "TeachingSchedule",
+        edit ? `TeachingSchedule?id=eq.${filterValue(edit.id)}` : "TeachingSchedule",
         {
           method: edit ? "PATCH" : "POST",
           headers: { Prefer: "return=representation" },
@@ -180,7 +181,7 @@ export function StaffMonitor({
   }
   async function remove(id: string) {
     try {
-      await supabaseRequest(`TeachingSchedule?id=eq.${id}`, {
+      await supabaseRequest(`TeachingSchedule?id=eq.${filterValue(id)}`, {
         method: "DELETE",
         headers: { Prefer: "return=minimal" },
       });
@@ -194,7 +195,7 @@ export function StaffMonitor({
   }
   async function assign(o: Option, teacher: string) {
     try {
-      await supabaseRequest(`ClassOption?id=eq.${o.id}`, {
+      await supabaseRequest(`ClassOption?id=eq.${filterValue(o.id)}`, {
         method: "PATCH",
         headers: { Prefer: "return=minimal" },
         body: JSON.stringify({ form_teacher_id: teacher || null }),

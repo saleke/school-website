@@ -13,6 +13,8 @@
  * a student would simply see an empty list.
  */
 
+import { isUuid, uuidOrNull } from "@/lib/postgrest";
+
 const ASSIGNMENT_SELECT =
   "select=id,title,description,subject_id,class_id,class_option_id,teacher_id,due_date,max_score,created_at,Subject(name),User(name)&order=due_date.desc&limit=20";
 
@@ -25,22 +27,6 @@ export type AssignmentQueryInput = {
 };
 
 /**
- * Escapes a value for use inside a logic tree or a plain filter.
- *
- * `encodeURIComponent` is not sufficient on its own. Per RFC 3986 it leaves
- * the sub-delimiters `!'()*` unescaped, and parentheses are structural inside
- * a PostgREST logic tree: a value containing `)` would close the `or=(...)`
- * early and let the remainder be parsed as a new filter. Those characters are
- * therefore escaped explicitly.
- */
-function encode(value: string): string {
-  return encodeURIComponent(value).replace(
-    /[!'()*]/g,
-    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
-}
-
-/**
  * Builds the `Assignment?...` path for the given viewer.
  *
  * Student scoping is the subtle case: a student should see assignments aimed
@@ -48,6 +34,11 @@ function encode(value: string): string {
  * other section in the same year must stay invisible. Filtering on `class_id`
  * alone cannot express that, which is what previously leaked one section's
  * homework to another.
+ *
+ * Ids are validated rather than escaped. PostgREST decodes the path before
+ * parsing a logic tree, so a percent-encoded `)` still closes the tree early
+ * (measured against the live project: PGRST100, identical to the unencoded
+ * form). Validation does not depend on that ordering. See lib/postgrest.ts.
  */
 export function buildAssignmentQuery({
   role,
@@ -57,24 +48,28 @@ export function buildAssignmentQuery({
   select = ASSIGNMENT_SELECT,
 }: AssignmentQueryInput): string {
   if (role === "student") {
-    if (classOptionId) {
+    const section = uuidOrNull(classOptionId);
+    const classUuid = uuidOrNull(classId);
+
+    if (section) {
       // Dotted form is mandatory inside or=(...).
-      const scope = `class_option_id.eq.${encode(classOptionId)}`;
-      const withinClass = classId
-        ? `and(${scope},class_id.eq.${encode(classId)})`
-        : scope;
+      // The `class_id` conjunct stops a same-named section in another year
+      // from matching.
+      const withinClass = classUuid
+        ? `and(class_option_id.eq.${section},class_id.eq.${classUuid})`
+        : `class_option_id.eq.${section}`;
       return `Assignment?or=(${withinClass},class_option_id.is.null)&${select}`;
     }
-    if (classId) {
+    if (classUuid) {
       // No section assigned yet: fall back to the whole class rather than
       // showing nothing at all.
-      return `Assignment?class_id=eq.${encode(classId)}&${select}`;
+      return `Assignment?class_id=eq.${classUuid}&${select}`;
     }
     return `Assignment?${select}`;
   }
 
-  if (role === "teacher" && teacherId) {
-    return `Assignment?teacher_id=eq.${encode(teacherId)}&${select}`;
+  if (role === "teacher" && isUuid(teacherId)) {
+    return `Assignment?teacher_id=eq.${teacherId}&${select}`;
   }
 
   return `Assignment?${select}`;

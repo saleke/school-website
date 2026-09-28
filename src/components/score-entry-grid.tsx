@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { getStoredUserId, supabaseRequest } from "@/lib/supabase";
+import { filterList } from "@/lib/postgrest";
 type Student = { id: string; user_id: string; name?: string; User?: { name?: string } | null };
 type Assessment = { id: string; name: string; max_score: number };
 const assessmentOrder = ["note", "assignment", "test", "exam"];
@@ -30,9 +31,11 @@ export function ScoreEntryGrid({ students, assessments, termId, subjectId }: { s
     void (async () => {
       try {
         type ScoreRow = { student_id: string; assessment_type_id: string; raw_score: number };
-        const studentIds = students.map((student) => student.id).join(",");
+        // Kept as an array so filterList can encode each element before
+        // joining. Joining here would leave the element commas unencoded.
+        const studentIds = students.map((student) => student.id);
         let scores = await supabaseRequest<ScoreRow[]>(
-          `Score?subject_id=eq.${encodeURIComponent(subjectId)}&term_id=eq.${encodeURIComponent(termId)}&student_id=in.(${studentIds})&select=student_id,assessment_type_id,raw_score`,
+          `Score?subject_id=eq.${encodeURIComponent(subjectId)}&term_id=eq.${encodeURIComponent(termId)}&student_id=in.(${filterList(studentIds)})&select=student_id,assessment_type_id,raw_score`,
         );
         if (!scores?.length) {
           const rows = await Promise.all(

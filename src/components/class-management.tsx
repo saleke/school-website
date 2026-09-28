@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { StudentResultSummary } from "@/components/student-result-summary";
 import { supabaseRequest } from "@/lib/supabase";
+import { filterValue } from "@/lib/postgrest";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type ClassRow = { id: string; name: string };
@@ -60,7 +61,7 @@ export function ClassManagement({
 
   async function patch(id: string, changes: Partial<Option>) {
     try {
-      await supabaseRequest(`ClassOption?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(changes) });
+      await supabaseRequest(`ClassOption?id=eq.${filterValue(id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(changes) });
       onOptionsChange(options.map((option) => option.id === id ? { ...option, ...changes } : option));
       onStatus("Section settings saved.");
     } catch (error) {

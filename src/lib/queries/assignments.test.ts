@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAssignmentQuery } from "@/lib/queries/assignments";
+import { ASSIGNMENT_SELECT, buildAssignmentQuery } from "@/lib/queries/assignments";
 
 const CLASS = "11111111-1111-1111-1111-111111111111";
 const SECTION_A = "22222222-2222-2222-2222-222222222222";
@@ -196,47 +196,63 @@ describe("buildAssignmentQuery", () => {
     });
   });
 
-  describe("input encoding", () => {
-    it("percent-encodes identifiers containing reserved characters", () => {
-      // A raw comma would add a spurious top-level argument.
-      const hostile = "abc,or=(1)";
+  describe("identifier validation", () => {
+    // These replaced an earlier set of escaping tests. Escaping was the wrong
+    // control inside a logic tree: PostgREST URL-decodes the path before
+    // parsing the filter grammar, so a percent-encoded ')' is a ')' by the
+    // time the tree is built and still closes the expression early. Measured
+    // against the live project, the encoded and raw forms fail identically
+    // with PGRST100. Validation does not depend on that ordering.
+    it("rejects a non-uuid section and does not build a logic tree", () => {
       const query = buildAssignmentQuery({
         role: "student",
         classId: CLASS,
-        classOptionId: hostile,
+        classOptionId: "not-a-uuid",
       });
-      expect(topLevelTree(query).split(",").length - 1).toBe(1);
+      // Falls back to the class filter rather than emitting a broken tree.
+      expect(query).toBe(`Assignment?class_id=eq.${CLASS}&${ASSIGNMENT_SELECT}`);
+      expect(query).not.toContain("or=(");
     });
 
-    it("escapes parentheses, which are structural inside a logic tree", () => {
-      // encodeURIComponent leaves () untouched, so a value containing ')'
-      // would close or=(...) early and the remainder would be parsed as a
-      // separate filter. This is a real injection vector, not a cosmetic one.
-      const hostile = "x)or(class_option_id.not.is.null(";
+    it("rejects a hostile value that tries to close the tree", () => {
       const query = buildAssignmentQuery({
         role: "student",
         classId: CLASS,
-        classOptionId: hostile,
+        classOptionId: "x)or(class_id.not.is.null(",
       });
-      const tree = logicTree(query);
-      expect(tree).not.toContain(")or(");
-      expect(tree).toContain("%29");
-      expect(tree).toContain("%28");
+      expect(query).not.toContain("or=(");
+      expect(query).not.toContain("not.is.null");
     });
 
-    it("keeps the logic tree balanced for a hostile identifier", () => {
+    it("emits no logic tree at all when neither id is a uuid", () => {
+      const query = buildAssignmentQuery({
+        role: "student",
+        classId: "also-not-a-uuid",
+        classOptionId: "x)or(",
+      });
+      expect(query).toBe(`Assignment?${ASSIGNMENT_SELECT}`);
+    });
+
+    it("still scopes normally when both ids are valid uuids", () => {
+      // The guard must not reject legitimate input.
       const query = buildAssignmentQuery({
         role: "student",
         classId: CLASS,
-        classOptionId: "a)(b",
+        classOptionId: SECTION_A,
       });
-      const tree = logicTree(query);
-      // The value's parens are escaped, so the only parentheses left are the
-      // tree's own: or=( opens one and and( opens another, each closed in turn.
-      expect((tree.match(/\(/g) ?? []).length).toBe(2);
-      expect((tree.match(/\)/g) ?? []).length).toBe(2);
-      // And the value appears only in escaped form.
-      expect(tree).toContain("a%29%28b");
+      expect(query).toContain(
+        `or=(and(class_option_id.eq.${SECTION_A},class_id.eq.${CLASS}),class_option_id.is.null)`,
+      );
+    });
+
+    it("rejects a non-uuid teacher id", () => {
+      const query = buildAssignmentQuery({
+        role: "teacher",
+        classId: null,
+        classOptionId: null,
+        teacherId: "nope",
+      });
+      expect(query).not.toContain("teacher_id=");
     });
   });
 

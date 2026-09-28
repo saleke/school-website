@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
 import { supabaseRequest } from "@/lib/supabase";
+import { filterValue } from "@/lib/postgrest";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
 import { AttendanceRecorder } from "@/components/attendance-recorder";
@@ -98,7 +99,7 @@ export function TeacherTodayDashboard({
         { method: "POST", body: JSON.stringify({ target_class_option_id: section.id }) },
       );
       const subjectList = await supabaseRequest<{ id: string; name: string }[]>(
-        `Subject?class_id=eq.${section.class_id}&select=id,name&order=name`,
+        `Subject?class_id=eq.${filterValue(section.class_id)}&select=id,name&order=name`,
       );
       const subject = subjectList?.[0];
       if (!subject) {
@@ -106,7 +107,7 @@ export function TeacherTodayDashboard({
         return;
       }
       const assessments = await supabaseRequest<Assessment[]>(
-        `AssessmentType?subject_id=eq.${subject.id}&select=id,name,max_score&order=name`,
+        `AssessmentType?subject_id=eq.${filterValue(subject.id)}&select=id,name,max_score&order=name`,
       );
       setScoreContext({
         termId: term.id,

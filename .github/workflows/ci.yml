@@ -35,12 +35,25 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # The unit tests need no credentials. The contract suite additionally
+      # checks that every dynamically built PostgREST query actually parses,
+      # which needs the project URL and the *publishable* key. Both are public
+      # by design: the publishable key ships in the client bundle, and the anon
+      # role can only be denied by RLS. The service secret is never needed
+      # here, so CI requires and stores no privileged credential.
+      #
+      # These come from repository variables, not secrets. If they are unset
+      # the contract suite skips itself rather than failing, so the rest of CI
+      # still runs. Set them under
+      # Settings > Secrets and variables > Actions > Variables to enable the
+      # contract coverage.
       - name: Unit tests
         run: npm test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
-      # No secrets are needed for any step above. The Supabase public key is
-      # safe to expose by design, and the build was verified to succeed with no
-      # Supabase env vars set at all, so nothing here can leak a credential.
-
+      # The build was verified to succeed with no Supabase env vars set at all,
+      # so this step cannot fail on a missing or placeholder credential.
       - name: Build
         run: npm run build

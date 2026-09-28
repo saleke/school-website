@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
 import { supabaseRequest } from "@/lib/supabase";
+import { filterValue } from "@/lib/postgrest";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
@@ -70,7 +71,7 @@ export function StudentTodayDashboard({
           return;
         }
         const rows = await supabaseRequest<Schedule[]>(
-          `TeachingSchedule?class_id=eq.${student.class_id}&select=id,subject_id,day_of_week,start_time,end_time,Subject(name)&order=day_of_week,start_time`,
+          `TeachingSchedule?class_id=eq.${filterValue(student.class_id)}&select=id,subject_id,day_of_week,start_time,end_time,Subject(name)&order=day_of_week,start_time`,
         );
         if (!cancelled) setSchedules(rows ?? []);
       } catch (error) {
