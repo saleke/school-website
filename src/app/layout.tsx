@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Lora, Source_Sans_3 } from "next/font/google";
 import { OfflineStatus } from "@/components/offline-status";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { ToastProvider } from "@/components/toast";
 import "./globals.css";
 import type { ReactNode } from "react";
 
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       className={`${sourceSans.variable} ${lora.variable}`}
     >
-      <body><ServiceWorkerRegistration /><OfflineStatus />{children}</body>
+      <body><ServiceWorkerRegistration /><OfflineStatus /><ToastProvider>{children}</ToastProvider></body>
     </html>
   );
 }

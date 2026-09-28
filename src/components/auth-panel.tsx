@@ -30,7 +30,8 @@ export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" |
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true); setMessage("");
+    setBusy(true);
+    setMessage("");
     try {
       if (mode === "signup" && password !== confirmPassword) throw new Error("Passwords do not match.");
       const name = [firstName, middleName, lastName].filter(Boolean).join(" ").trim();
@@ -46,20 +47,168 @@ export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" |
           ? "Account created. Confirm your email, then log in to see the admin approval waiting screen."
           : "Account created. Confirm your email, then log in.");
       }
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Something went wrong."); }
-    finally { setBusy(false); }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  return <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[.9fr_1.1fr]">
-    <section className="pt-4 lg:pt-12"><p className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-text-secondary">School Platform</p><h1 className="font-display text-5xl font-semibold leading-tight">Your school identity, in one place.</h1></section>
-    <Card className="p-7 sm:p-9">
-      <div className="mb-7 flex gap-2" role="group" aria-label="Authentication action"><button type="button" onClick={() => setMode("signup")} className={`rounded-lg px-4 py-2 font-semibold ${mode === "signup" ? "bg-accent text-[var(--accent-contrast)]" : "border border-[var(--border)]"}`}>Create account</button><button type="button" onClick={() => setMode("login")} className={`rounded-lg px-4 py-2 font-semibold ${mode === "login" ? "bg-accent text-[var(--accent-contrast)]" : "border border-[var(--border)]"}`}>Log in</button></div>
-      <h2 className="font-display text-3xl font-semibold">{mode === "signup" ? "Who are you?" : "Welcome back"}</h2>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2" role="group" aria-label="Choose account type"><button type="button" aria-pressed={role === "student"} onClick={() => setRole("student")} className={`rounded-xl border p-5 text-left transition ${role === "student" ? "border-accent bg-surface-2" : "border-[var(--border)]"}`}><span className="block text-lg font-bold">I&apos;m a Student</span><span className="mt-1 block text-sm text-text-secondary">Learn, practice, and grow.</span></button><button type="button" aria-pressed={role === "teacher"} onClick={() => setRole("teacher")} className={`rounded-xl border p-5 text-left transition ${role === "teacher" ? "border-accent bg-surface-2" : "border-[var(--border)]"}`}><span className="block text-lg font-bold">I&apos;m a Teacher</span><span className="mt-1 block text-sm text-text-secondary">Teacher access starts pending admin approval.</span></button></div>
-      <form className="mt-7 space-y-4" onSubmit={submit}>{mode === "signup" && <div className="grid gap-4 sm:grid-cols-3"><label className="block text-sm font-semibold">First name<input required value={firstName} onChange={e => setFirstName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><label className="block text-sm font-semibold">Middle name <span className="font-normal text-text-secondary">(optional)</span><input value={middleName} onChange={e => setMiddleName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><label className="block text-sm font-semibold">Last name<input required value={lastName} onChange={e => setLastName(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label></div>}<label className="block text-sm font-semibold">Email<input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3" /></label><div className={`grid gap-4 ${mode === "signup" ? "sm:grid-cols-2" : ""}`}><PasswordField label="Password" value={password} onChange={setPassword} visible={showPassword} onToggle={() => setShowPassword(value => !value)} />{mode === "signup" && <div><PasswordField label="Confirm password" value={confirmPassword} onChange={setConfirmPassword} visible={showConfirmPassword} onToggle={() => setShowConfirmPassword(value => !value)} /><div aria-live="polite" className={`mt-1 min-h-5 text-xs font-semibold ${confirmPassword && password !== confirmPassword ? "text-danger" : "text-success"}`}>{confirmPassword ? password === confirmPassword ? "Passwords match." : "Passwords do not match." : ""}</div></div>}</div><Button type="submit" disabled={busy || (mode === "signup" && password !== confirmPassword)} className="w-full">{busy ? "Please wait…" : mode === "signup" ? `Create ${role} account` : "Log in"}</Button></form>
-      {message && <p className="mt-5 rounded-lg border border-[var(--border)] bg-surface-2 p-3 text-sm" role="status">{message}</p>}
-    </Card>
-  </div>;
+  return (
+    <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[.9fr_1.1fr]">
+      <section className="pt-4 lg:pt-12 animate-fade-in">
+        <p className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-text-secondary">School Platform</p>
+        <h1 className="font-display text-5xl font-semibold leading-tight">
+          Your school identity, in one place.
+        </h1>
+        <p className="mt-4 text-lg text-text-secondary">
+          {mode === "signup"
+            ? "Create your account to access the school portal."
+            : "Welcome back. Sign in to continue to your dashboard."}
+        </p>
+      </section>
+
+      <Card className="p-7 sm:p-9 animate-scale-in">
+        <div className="mb-7 flex gap-2" role="group" aria-label="Authentication action">
+          <button
+            type="button"
+            onClick={() => setMode("signup")}
+            className={`rounded-lg px-4 py-2 font-semibold transition ${mode === "signup" ? "bg-accent text-accent-contrast" : "border border-[var(--border)] text-text-secondary hover:text-text-primary"}`}
+          >
+            Create account
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("login")}
+            className={`rounded-lg px-4 py-2 font-semibold transition ${mode === "login" ? "bg-accent text-accent-contrast" : "border border-[var(--border)] text-text-secondary hover:text-text-primary"}`}
+          >
+            Log in
+          </button>
+        </div>
+
+        <h2 className="font-display text-3xl font-semibold">
+          {mode === "signup" ? "Who are you?" : "Welcome back"}
+        </h2>
+
+        {mode === "signup" && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2" role="group" aria-label="Choose account type">
+            <button
+              type="button"
+              aria-pressed={role === "student"}
+              onClick={() => setRole("student")}
+              className={`rounded-xl border p-5 text-left transition ${role === "student" ? "border-accent bg-surface-2" : "border-[var(--border)] hover:border-[color-mix(in_srgb,var(--accent-light)_30%,var(--border))]"}`}
+            >
+              <span className="block text-lg font-bold">I&apos;m a Student</span>
+              <span className="mt-1 block text-sm text-text-secondary">Learn, practice, and grow.</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={role === "teacher"}
+              onClick={() => setRole("teacher")}
+              className={`rounded-xl border p-5 text-left transition ${role === "teacher" ? "border-accent bg-surface-2" : "border-[var(--border)] hover:border-[color-mix(in_srgb,var(--accent-light)_30%,var(--border))]"}`}
+            >
+              <span className="block text-lg font-bold">I&apos;m a Teacher</span>
+              <span className="mt-1 block text-sm text-text-secondary">Teacher access starts pending admin approval.</span>
+            </button>
+          </div>
+        )}
+
+        <form className="mt-7 space-y-4" onSubmit={submit}>
+          {mode === "signup" && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <label className="block text-sm font-semibold">
+                First name
+                <input
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3"
+                />
+              </label>
+              <label className="block text-sm font-semibold">
+                Middle name <span className="font-normal text-text-secondary">(optional)</span>
+                <input
+                  value={middleName}
+                  onChange={(e) => setMiddleName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3"
+                />
+              </label>
+              <label className="block text-sm font-semibold">
+                Last name
+                <input
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3"
+                />
+              </label>
+            </div>
+          )}
+
+          <label className="block text-sm font-semibold">
+            Email
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 py-3"
+            />
+          </label>
+
+          <div className={`grid gap-4 ${mode === "signup" ? "sm:grid-cols-2" : ""}`}>
+            <PasswordField
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              visible={showPassword}
+              onToggle={() => setShowPassword((v) => !v)}
+            />
+            {mode === "signup" && (
+              <div>
+                <PasswordField
+                  label="Confirm password"
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  visible={showConfirmPassword}
+                  onToggle={() => setShowConfirmPassword((v) => !v)}
+                />
+                <div
+                  aria-live="polite"
+                  className={`mt-1 min-h-5 text-xs font-semibold ${confirmPassword && password !== confirmPassword ? "text-danger" : "text-success"}`}
+                >
+                  {confirmPassword
+                    ? password === confirmPassword
+                      ? "Passwords match."
+                      : "Passwords do not match."
+                    : ""}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button
+            type="submit"
+            disabled={busy || (mode === "signup" && password !== confirmPassword)}
+            className="w-full"
+            size="lg"
+          >
+            {busy
+              ? "Please wait…"
+              : mode === "signup"
+                ? `Create ${role} account`
+                : "Sign in"}
+          </Button>
+
+          {message && (
+            <p className="mt-5 rounded-lg border border-[var(--border)] bg-surface-2 p-3 text-sm" role="status">
+              {message}
+            </p>
+          )}
+        </form>
+      </Card>
+    </div>
+  );
 }
 
 function PasswordField({
@@ -77,5 +226,27 @@ function PasswordField({
   onToggle: () => void;
   required?: boolean;
 }) {
-  return <label className="block text-sm font-semibold">{label}<div className="relative mt-1"><input required={required} minLength={8} type={visible ? "text" : "password"} value={value} onChange={event => onChange(event.target.value)} className="min-h-12 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 pr-20 py-3" /><button type="button" onClick={onToggle} aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`} className="absolute right-2 top-1/2 min-h-9 -translate-y-1/2 rounded-md px-2 text-xs font-semibold text-text-secondary hover:bg-surface-2">{visible ? "Hide" : "Show"}</button></div></label>;
+  return (
+    <label className="block text-sm font-semibold">
+      {label}
+      <div className="relative mt-1">
+        <input
+          required={required}
+          minLength={8}
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-h-12 w-full rounded-lg border border-[var(--border)] bg-surface-0 px-3 pr-20 py-3"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          className="absolute right-2 top-1/2 min-h-9 -translate-y-1/2 rounded-md px-2 text-xs font-semibold text-text-secondary hover:bg-surface-2"
+        >
+          {visible ? "Hide" : "Show"}
+        </button>
+      </div>
+    </label>
+  );
 }

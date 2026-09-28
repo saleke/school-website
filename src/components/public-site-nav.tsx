@@ -47,6 +47,17 @@ export function PublicSiteNav() {
 
   return (
     <>
+      {/* Mobile top header - static branding */}
+      <div className="flex items-center border-b border-[var(--border)] bg-surface-0/80 px-5 py-4 backdrop-blur-xl sm:hidden">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="glass-brand-mark"><span>S</span></span>
+          <span>
+            <span className="font-display block text-lg font-semibold tracking-tight">School Platform</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-text-secondary">School home</span>
+          </span>
+        </Link>
+      </div>
+
       <div className="hidden h-[4.75rem] sm:block" aria-hidden="true" />
       <nav className="public-site-nav glass-nav glass-nav-fixed left-0 top-0 z-40 hidden w-full max-w-none items-center justify-center gap-4 border-x-0 px-5 py-2.5 sm:flex" aria-label="Main navigation">
         <div className="flex w-full max-w-6xl items-center justify-between gap-4">

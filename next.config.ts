@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
 };
 // next.config.js
 module.exports = {
-  allowedDevOrigins: ['10.0.121.194'],
+  allowedDevOrigins: ['10.0.33.28'],
 }
 
 export default nextConfig;
