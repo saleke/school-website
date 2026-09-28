@@ -15,11 +15,16 @@ build/
 coverage/
 
 # Local environment and secrets
-.env
-.env.example
-.env.*
-!.env.example
+# Every .env* file is ignored, including .env.example and .env.local.
+# Never re-include an env template here: if it ever holds a live key it will
+# be committed and GitHub push protection will block the push.
+.env*
 *.pem
+
+# Scratch/design-reference images (not part of the shipped app)
+img/
+screenshot/
+screenshots/
 
 # TypeScript and logs
 *.tsbuildinfo
