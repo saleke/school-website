@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useIsHydrated } from "@/lib/use-is-hydrated";
 import { supabaseRequest } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
-import { Skeleton } from "@/components/skeleton";
 import { AttendanceRecorder } from "@/components/attendance-recorder";
 import { AnnouncementFeed } from "@/components/announcement-feed";
 import { AssignmentForm } from "@/components/assignment-form";
 import { AssignmentBoard } from "@/components/assignment-board";
 import { ScoreEntryGrid } from "@/components/score-entry-grid";
-import { Avatar, Badge, Button, Card } from "@/components/ui";
+import { Avatar, Button } from "@/components/ui";
 
 type Schedule = {
   id: string;
@@ -62,11 +62,7 @@ export function TeacherTodayDashboard({
   const [loadingScores, setLoadingScores] = useState(false);
   const [subjects, setSubjects] = useState<{ id: string; name: string; class_id: string }[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsHydrated();
 
   const today = mounted ? new Date().getDay() : 0;
   const todaySchedules = schedules
@@ -237,7 +233,7 @@ export function TeacherTodayDashboard({
                 <p className="mt-1 text-sm text-text-secondary">You&apos;re done teaching for the day.</p>
               </div>
             ) : (
-              <EmptyState icon="Today" title="No classes scheduled today" description="Your teaching schedule will appear here." />
+              <EmptyState icon="calendar" title="No classes scheduled today" description="Your teaching schedule will appear here." />
             )}
 
             {/* Today's schedule */}
@@ -269,7 +265,7 @@ export function TeacherTodayDashboard({
                 <AttendanceRecorder key={section.id} classOptionId={section.id} className={section.code} />
               ))
             ) : (
-              <EmptyState icon="Attendance" title="No sections assigned" description="You need to be assigned as a form teacher to take attendance." />
+              <EmptyState icon="check" title="No sections assigned" description="You need to be assigned as a form teacher to take attendance." />
             )}
           </div>
         )}
@@ -285,7 +281,7 @@ export function TeacherTodayDashboard({
                 subjectId={scoreContext.subjectId}
               />
             ) : (
-              <EmptyState icon="Assessment" title="No assessment selected" description="Go to the Today tab and click 'Record assessment' to get started." />
+              <EmptyState icon="chart" title="No assessment selected" description="Go to the Today tab and click 'Record assessment' to get started." />
             )}
           </div>
         )}
@@ -304,7 +300,7 @@ export function TeacherTodayDashboard({
           </div>
         )}
 
-        {activeTab === "announcements" && <AnnouncementFeed userId={profile.id} role="teacher" />}
+        {activeTab === "announcements" && <AnnouncementFeed role="teacher" />}
       </div>
     </main>
   );

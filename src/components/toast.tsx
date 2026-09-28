@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useIsHydrated } from "@/lib/use-is-hydrated";
 
 type ToastVariant = "success" | "error" | "info";
 
@@ -23,20 +24,38 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsHydrated();
   const nextId = useRef(0);
+  const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  // Toasts and their auto-dismiss timers are queued in provider state, so
+  // a re-render must not restart the countdown or leave orphaned timers.
+  const timersRef = timers;
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    const pending = timersRef.current;
+    return () => {
+      pending.forEach((handle) => clearTimeout(handle));
+      pending.clear();
+    };
+  }, [timersRef]);
+
+  const dismiss = useCallback((id: number) => {
+    setToasts((current) => current.filter((t) => t.id !== id));
+    const handle = timersRef.current.get(id);
+    if (handle) {
+      clearTimeout(handle);
+      timersRef.current.delete(id);
+    }
+  }, [timersRef]);
 
   const toast = useCallback((message: string, variant: ToastVariant = "info") => {
     const id = nextId.current++;
     setToasts((current) => [...current, { id, message, variant }]);
-    setTimeout(() => {
-      setToasts((current) => current.filter((t) => t.id !== id));
-    }, 4000);
-  }, []);
+    timersRef.current.set(
+      id,
+      setTimeout(() => dismiss(id), 4000),
+    );
+  }, [dismiss, timersRef]);
 
   return (
     <ToastContext.Provider value={{ toast }}>

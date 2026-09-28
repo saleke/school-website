@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useIsHydrated } from "@/lib/use-is-hydrated";
 import { supabaseRequest } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
@@ -8,7 +9,7 @@ import { Skeleton } from "@/components/skeleton";
 import { StudentResultSummary } from "@/components/student-result-summary";
 import { AssignmentBoard } from "@/components/assignment-board";
 import { AnnouncementFeed } from "@/components/announcement-feed";
-import { Avatar, Badge, Button, Card } from "@/components/ui";
+import { Avatar, Button } from "@/components/ui";
 
 type Student = {
   id: string;
@@ -45,11 +46,7 @@ export function StudentTodayDashboard({
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"today" | "results" | "assignments" | "announcements">("today");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsHydrated();
 
   const today = mounted ? new Date().getDay() : 0;
   const todaySchedules = schedules
@@ -156,7 +153,7 @@ export function StudentTodayDashboard({
                 <p className="mt-1 text-sm text-text-secondary">You&apos;re done for the day. Check your results or assignments.</p>
               </div>
             ) : (
-              <EmptyState icon="Today" title="No classes scheduled" description="Your timetable will appear once your class is assigned." />
+              <EmptyState icon="calendar" title="No classes scheduled" description="Your timetable will appear once your class is assigned." />
             )}
 
             {/* Today's schedule */}
@@ -182,8 +179,8 @@ export function StudentTodayDashboard({
         )}
 
         {activeTab === "results" && <StudentResultSummary studentId={student.id} studentName={profile.name} />}
-        {activeTab === "assignments" && <AssignmentBoard studentId={student.id} classId={student.class_id} classOptionId={student.class_option_id} role="student" />}
-        {activeTab === "announcements" && <AnnouncementFeed userId={profile.id} role="student" />}
+        {activeTab === "assignments" && <AssignmentBoard classId={student.class_id} classOptionId={student.class_option_id} role="student" />}
+        {activeTab === "announcements" && <AnnouncementFeed role="student" />}
       </div>
     </main>
   );

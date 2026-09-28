@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { StudentResultSummary } from "@/components/student-result-summary";
 import { supabaseRequest } from "@/lib/supabase";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type ClassRow = { id: string; name: string };
 type Option = { id: string; class_id: string; code: string; form_teacher_id: string | null; is_active: boolean };
@@ -33,6 +34,7 @@ export function ClassManagement({
   const [students, setStudents] = useState<Student[]>([]);
   const [query, setQuery] = useState("");
   const [resultStudent, setResultStudent] = useState<Student | null>(null);
+  const [pendingClose, setPendingClose] = useState<Option | null>(null);
   const selected = options.find((option) => option.id === optionId);
   const visibleOptions = readOnly
     ? options.filter((option) => option.form_teacher_id === formTeacherId)
@@ -104,7 +106,7 @@ export function ClassManagement({
         {classId && <>
           <div className="mt-5 flex items-center justify-between"><div><p className="text-sm font-semibold">Sections</p><p className="text-xs text-text-secondary">{classOptions.filter((option) => option.is_active).length} of 4 open</p></div></div>
           <div className="mt-3 grid grid-cols-4 gap-2">{classOptions.map((option) => <button type="button" key={option.id} onClick={() => void open(option)} className={`rounded-lg border p-3 text-center ${optionId === option.id ? "border-accent bg-surface-2" : "border-[var(--border)] bg-surface-0"} ${!option.is_active ? "opacity-45" : ""}`}><span className="block text-xl font-bold">{option.code}</span><span className="text-[10px] uppercase text-text-secondary">{option.is_active ? "Open" : "Closed"}</span></button>)}</div>
-          {allowSectionSettings && <div className="mt-4 flex flex-wrap gap-2">{classOptions.map((option) => <button type="button" key={option.id} onClick={() => { if (option.is_active && !window.confirm(`Close section ${option.code}? Students will no longer be able to use this section.`)) return; void patch(option.id, { is_active: !option.is_active }); }} className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-xs font-semibold">{option.is_active ? `Close ${option.code}` : `Open ${option.code}`}</button>)}</div>}
+          {allowSectionSettings && <div className="mt-4 flex flex-wrap gap-2">{classOptions.map((option) => <button type="button" key={option.id} onClick={() => { if (option.is_active) { setPendingClose(option); return; } void patch(option.id, { is_active: true }); }} className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-xs font-semibold">{option.is_active ? `Close ${option.code}` : `Open ${option.code}`}</button>)}</div>}
         </>}
       </div>
       {selected?.is_active && <div className="rounded-xl border border-[var(--border)] bg-surface-1 p-4 sm:p-5">
@@ -116,6 +118,18 @@ export function ClassManagement({
         </div>
       </div>}
       {resultStudent && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={`${resultStudent.User?.name ?? "Student"} performance`}><div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-surface-0 shadow-xl"><div className="sticky top-0 flex items-center justify-between border-b border-[var(--border)] bg-surface-0 px-4 py-3"><p className="font-semibold">Individual performance</p><button type="button" onClick={() => setResultStudent(null)} className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-sm font-semibold">Close</button></div><div className="p-4"><StudentResultSummary studentId={resultStudent.id} studentName={resultStudent.User?.name} /></div></div></div>}
+      <ConfirmDialog
+        open={pendingClose !== null}
+        title="Close section"
+        message={`Section ${pendingClose?.code ?? ""} will be closed. Students will no longer be able to use it. You can reopen it at any time.`}
+        confirmLabel="Close section"
+        destructive
+        onCancel={() => setPendingClose(null)}
+        onConfirm={() => {
+          if (pendingClose) void patch(pendingClose.id, { is_active: false });
+          setPendingClose(null);
+        }}
+      />
     </section>
   );
 }

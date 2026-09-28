@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabaseRequest } from "@/lib/supabase";
 import { SubjectManagement } from "@/components/subject-management";
 import { AccountDirectory } from "@/components/account-directory";
 import { StaffMonitor } from "@/components/staff-monitor";
 import { ClassManagement } from "@/components/class-management";
 import { AcademicCalendar } from "@/components/academic-calendar";
-import { Avatar, Badge, Button, Card, StatCard } from "@/components/ui";
+import { Button, StatCard } from "@/components/ui";
 import { DashboardSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast";
 
@@ -66,7 +66,7 @@ const tabDescriptions: Record<Tab, string> = {
   settings: "Set academic sessions, terms, and timing.",
 };
 
-export function AdminDashboard({ name, email, onSignOut }: { name: string; email: string; onSignOut: () => void }) {
+export function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("pulse");
   const [loading, setLoading] = useState(true);

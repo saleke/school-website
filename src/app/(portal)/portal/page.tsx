@@ -7,6 +7,7 @@ import { AdminDashboard } from "@/components/admin-dashboard";
 import { StudentTodayDashboard } from "@/components/student-today-dashboard";
 import { TeacherTodayDashboard } from "@/components/teacher-today-dashboard";
 import { schoolContent } from "@/content/school";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type Profile = { id: string; name: string; email: string; role: "student" | "teacher" | "admin" | "alumni"; teacher_approval_status: "pending" | "approved" | "rejected" | null };
 type Student = { id: string; user_id: string; admission_no?: string | null; class_id: string | null; class_option_id: string | null; class_locked: boolean };
@@ -20,11 +21,15 @@ export default function PortalPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [classOptions, setClassOptions] = useState<ClassOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
   function signOut() {
-    if (!window.confirm("Sign out of your school account?")) return;
     clearAuthSession();
     router.push("/");
+  }
+
+  function requestSignOut() {
+    setConfirmingSignOut(true);
   }
 
   useEffect(() => {
@@ -43,13 +48,18 @@ export default function PortalPage() {
           setStudent(students[0] ?? null);
         }
 
-        if (current.role === "teacher" && current.teacher_approval_status === "approved") {
-          const [teacherSchedules, allOptions] = await Promise.all([
-            supabaseRequest<Schedule[]>(`TeachingSchedule?teacher_id=eq.${encodeURIComponent(userId)}&select=id,class_id,class_option_id,subject_id,day_of_week,start_time,end_time,is_form_teacher,Class(name),Subject(name)&order=day_of_week,start_time`),
-            supabaseRequest<ClassOption[]>("ClassOption?is_active=eq.true&select=id,class_id,code,form_teacher_id,is_active&order=class_id,code"),
-          ]);
-          setSchedules(teacherSchedules ?? []);
+        // Students need class options too, to resolve which section they
+        // belong to. Previously this ran only in the teacher branch, so
+        // `classOptions` was always empty for students and the dashboard
+        // silently received a null section.
+        if (current.role === "student" || current.role === "teacher") {
+          const allOptions = await supabaseRequest<ClassOption[]>("ClassOption?is_active=eq.true&select=id,class_id,code,form_teacher_id,is_active&order=class_id,code");
           setClassOptions(allOptions ?? []);
+        }
+
+        if (current.role === "teacher" && current.teacher_approval_status === "approved") {
+          const teacherSchedules = await supabaseRequest<Schedule[]>(`TeachingSchedule?teacher_id=eq.${encodeURIComponent(userId)}&select=id,class_id,class_option_id,subject_id,day_of_week,start_time,end_time,is_form_teacher,Class(name),Subject(name)&order=day_of_week,start_time`);
+          setSchedules(teacherSchedules ?? []);
         }
       } catch (error) {
         console.error("Portal load error:", error);
@@ -58,6 +68,22 @@ export default function PortalPage() {
       }
     })();
   }, []);
+
+  // Rendered alongside the dashboard so it is available to every role
+  // branch below without each one having to mount its own copy.
+  const signOutDialog = (
+    <ConfirmDialog
+      open={confirmingSignOut}
+      title="Sign out"
+      message="You will be returned to the public site. Any unsaved work on this page will be lost."
+      confirmLabel="Sign out"
+      onCancel={() => setConfirmingSignOut(false)}
+      onConfirm={() => {
+        setConfirmingSignOut(false);
+        signOut();
+      }}
+    />
+  );
 
   if (loading) {
     return (
@@ -82,7 +108,12 @@ export default function PortalPage() {
   if (!profile) return null;
 
   if (profile.role === "admin") {
-    return <AdminDashboard name={profile.name} email={profile.email} onSignOut={signOut} />;
+    return (
+      <>
+        <AdminDashboard onSignOut={requestSignOut} />
+        {signOutDialog}
+      </>
+    );
   }
 
   if (profile.role === "teacher" && profile.teacher_approval_status !== "approved") {
@@ -92,22 +123,33 @@ export default function PortalPage() {
           <section className="rounded-2xl border border-[var(--border)] bg-surface-1 p-6 text-center">
             <h1 className="font-display text-3xl font-semibold">Waiting for admin approval</h1>
             <p className="mt-3 text-text-secondary">Your account is active, but your teaching portal stays locked until a school admin approves it.</p>
-            <button type="button" onClick={signOut} className="mt-6 min-h-11 rounded-lg border border-[var(--border)] px-5 text-sm font-semibold hover:bg-surface-2">
+            <button type="button" onClick={requestSignOut} className="mt-6 min-h-11 rounded-lg border border-[var(--border)] px-5 text-sm font-semibold hover:bg-surface-2">
               Sign out
             </button>
           </section>
         </div>
+        {signOutDialog}
       </main>
     );
   }
 
   if (profile.role === "teacher") {
-    return <TeacherTodayDashboard profile={profile} schedules={schedules} classOptions={classOptions} onSignOut={signOut} />;
+    return (
+      <>
+        <TeacherTodayDashboard profile={profile} schedules={schedules} classOptions={classOptions} onSignOut={requestSignOut} />
+        {signOutDialog}
+      </>
+    );
   }
 
   if (profile.role === "student" && student) {
     const section = classOptions.find((o) => o.id === student.class_option_id);
-    return <StudentTodayDashboard profile={profile} student={student} classOption={section ?? null} onSignOut={signOut} />;
+    return (
+      <>
+        <StudentTodayDashboard profile={profile} student={student} classOption={section ?? null} onSignOut={requestSignOut} />
+        {signOutDialog}
+      </>
+    );
   }
 
   return (
@@ -116,11 +158,12 @@ export default function PortalPage() {
         <section className="rounded-2xl border border-[var(--border)] bg-surface-1 p-6 text-center">
           <h1 className="font-display text-3xl font-semibold">Welcome, {profile.name}</h1>
           <p className="mt-3 text-text-secondary">Your role is being set up. Please check back soon.</p>
-          <button type="button" onClick={signOut} className="mt-6 min-h-11 rounded-lg border border-[var(--border)] px-5 text-sm font-semibold hover:bg-surface-2">
+          <button type="button" onClick={requestSignOut} className="mt-6 min-h-11 rounded-lg border border-[var(--border)] px-5 text-sm font-semibold hover:bg-surface-2">
             Sign out
           </button>
         </section>
       </div>
+      {signOutDialog}
     </main>
   );
 }

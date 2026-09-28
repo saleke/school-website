@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabaseRequest } from "@/lib/supabase";
 import { TimetableOverview } from "@/components/timetable-overview";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 type Teacher = {
   id: string;
   name: string;
@@ -85,6 +86,7 @@ export function StaffMonitor({
   });
   const [loadedSubjects, setLoadedSubjects] = useState<Named[]>([]);
   const [loadedOptions, setLoadedOptions] = useState<Option[]>([]);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const scheduleOptions = useMemo(
     () =>
       Array.from(
@@ -177,7 +179,6 @@ export function StaffMonitor({
     }
   }
   async function remove(id: string) {
-    if (!window.confirm("Delete this teaching schedule?")) return;
     try {
       await supabaseRequest(`TeachingSchedule?id=eq.${id}`, {
         method: "DELETE",
@@ -400,7 +401,7 @@ export function StaffMonitor({
                   </button>
                   <button
                     type="button"
-                    onClick={() => void remove(s.id)}
+                    onClick={() => setPendingDeleteId(s.id)}
                     className="min-h-10 rounded-lg border border-[var(--danger)] px-3 text-xs font-semibold text-danger"
                   >
                     Delete
@@ -448,6 +449,19 @@ export function StaffMonitor({
             ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Delete teaching schedule"
+        message="This slot will be removed from the timetable. This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          if (pendingDeleteId) void remove(pendingDeleteId);
+          setPendingDeleteId(null);
+        }}
+      />
     </div>
   );
 }

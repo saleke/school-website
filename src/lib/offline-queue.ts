@@ -11,9 +11,9 @@ type QueuedMutation = {
   table: string;
   method: "POST" | "PATCH" | "DELETE";
   path: string;
+  headers?: Record<string, string>;
   body: string;
   timestamp: number;
-  synced: boolean;
 };
 
 function openDB(): Promise<IDBDatabase> {
@@ -30,7 +30,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function queueMutation(mutation: Omit<QueuedMutation, "id" | "timestamp" | "synced">): Promise<void> {
+export async function queueMutation(mutation: Omit<QueuedMutation, "id" | "timestamp">): Promise<void> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAME, "readwrite");
   const store = tx.objectStore(STORE_NAME);
@@ -38,7 +38,6 @@ export async function queueMutation(mutation: Omit<QueuedMutation, "id" | "times
     ...mutation,
     id: crypto.randomUUID(),
     timestamp: Date.now(),
-    synced: false,
   };
   await new Promise<void>((resolve, reject) => {
     const request = store.add(item);
@@ -54,8 +53,10 @@ export async function getPendingMutations(): Promise<QueuedMutation[]> {
   return new Promise((resolve, reject) => {
     const request = store.getAll();
     request.onsuccess = () => {
-      const items = (request.result as QueuedMutation[]).filter((m) => !m.synced);
-      resolve(items.sort((a, b) => a.timestamp - b.timestamp));
+      // Oldest first, so a queued batch replays in the order it was recorded.
+      resolve(
+        (request.result as QueuedMutation[]).sort((a, b) => a.timestamp - b.timestamp),
+      );
     };
     request.onerror = () => reject(request.error);
   });
@@ -84,7 +85,12 @@ export async function syncPendingMutations(
       const { supabaseRequest } = await import("@/lib/supabase");
       await supabaseRequest(mutation.path, {
         method: mutation.method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // Replays must carry the same idempotency preference as the original
+          // call, or an upsert queued offline would be inserted twice.
+          ...(mutation.headers ?? {}),
+        },
         body: mutation.body,
       });
       await markMutationSynced(mutation.id);

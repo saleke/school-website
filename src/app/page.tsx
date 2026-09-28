@@ -3,7 +3,7 @@ import { PublicSiteNav } from "@/components/public-site-nav";
 import { ImageCarousel } from "@/components/image-carousel";
 import { RotatingHeadline } from "@/components/rotating-headline";
 import { AnimatedCounter } from "@/components/animated-counter";
-import { Badge, Button, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 
 export const revalidate = 3600;
 
