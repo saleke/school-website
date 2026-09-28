@@ -50,7 +50,16 @@ export function AssignmentBoard({
           // class_id alone, so every section in a year saw the same
           // assignments regardless of which one the student belonged to.
           if (classOptionId) {
-            query = `Assignment?or=(and(class_option_id=eq.${encodeURIComponent(classOptionId)},class_id=eq.${encodeURIComponent(classId ?? "")}),class_option_id=is.null)&${select}`;
+            // Logic trees need PostgREST's dotted form (`column.eq.value`),
+            // not the `column=eq.value` used by plain filters. Mixing the two
+            // is a PGRST100 parse error, which surfaces as an empty list plus
+            // an error toast rather than an obvious failure.
+            const scope = `class_option_id.eq.${encodeURIComponent(classOptionId)}`;
+            const withinClass = classId
+              ? `and(${scope},class_id.eq.${encodeURIComponent(classId)})`
+              : scope;
+            // The student's own section, plus anything aimed at the whole class.
+            query = `Assignment?or=(${withinClass},class_option_id.is.null)&${select}`;
           } else if (classId) {
             query = `Assignment?class_id=eq.${encodeURIComponent(classId)}&${select}`;
           } else {
