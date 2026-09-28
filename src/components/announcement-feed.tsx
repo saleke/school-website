@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabaseRequest } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
+import { Badge, Button, Card } from "@/components/ui";
 
 type Announcement = {
   id: string;
@@ -49,6 +50,31 @@ export function AnnouncementFeed({ userId, role }: { userId: string; role: strin
     return () => { cancelled = true; };
   }, [toast]);
 
+  // Real-time: poll for new announcements every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const rows = await supabaseRequest<Announcement[]>(
+          "Announcement?select=id,title,body,scope,target_id,author_id,published_at,User(name)&order=published_at.desc&limit=20",
+        );
+        if (rows) {
+          setAnnouncements((current) => {
+            const currentIds = new Set(current.map((a) => a.id));
+            const newOnes = rows.filter((r) => !currentIds.has(r.id));
+            if (newOnes.length > 0) {
+              toast(`${newOnes.length} new announcement${newOnes.length > 1 ? "s" : ""}`, "info");
+              return rows;
+            }
+            return current;
+          });
+        }
+      } catch {
+        // Silent fail for polling
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [toast]);
+
   async function publish() {
     if (!title.trim() || !body.trim()) return;
     setSaving(true);
@@ -80,13 +106,9 @@ export function AnnouncementFeed({ userId, role }: { userId: string; role: strin
       <div className="flex items-center justify-between">
         <h3 className="font-display text-xl font-semibold">Announcements</h3>
         {(role === "teacher" || role === "admin") && (
-          <button
-            type="button"
-            onClick={() => setShowForm((v) => !v)}
-            className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-sm font-semibold hover:bg-surface-2"
-          >
+          <Button variant="secondary" size="sm" onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Cancel" : "New announcement"}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -114,14 +136,9 @@ export function AnnouncementFeed({ userId, role }: { userId: string; role: strin
               <option value="school">School-wide</option>
               <option value="class">My class</option>
             </select>
-            <button
-              type="button"
-              onClick={() => void publish()}
-              disabled={saving || !title.trim() || !body.trim()}
-              className="min-h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-[var(--accent-contrast)] disabled:opacity-40"
-            >
+            <Button size="sm" onClick={() => void publish()} disabled={saving || !title.trim() || !body.trim()}>
               {saving ? "Publishing..." : "Publish"}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -137,9 +154,7 @@ export function AnnouncementFeed({ userId, role }: { userId: string; role: strin
                   <h4 className="font-semibold">{a.title}</h4>
                   <p className="mt-1 text-sm text-text-secondary">{a.body}</p>
                 </div>
-                <span className="shrink-0 rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-secondary">
-                  {a.scope}
-                </span>
+                <Badge tone={a.scope === "school" ? "accent" : "neutral"}>{a.scope}</Badge>
               </div>
               <p className="mt-2 text-xs text-text-secondary">
                 {a.User?.name ?? "Staff"} · {mounted ? new Date(a.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : ""}

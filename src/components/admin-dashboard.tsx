@@ -7,7 +7,6 @@ import { AccountDirectory } from "@/components/account-directory";
 import { StaffMonitor } from "@/components/staff-monitor";
 import { ClassManagement } from "@/components/class-management";
 import { AcademicCalendar } from "@/components/academic-calendar";
-import { AccountSettings } from "@/components/account-settings";
 import { Avatar, Badge, Button, Card, StatCard } from "@/components/ui";
 import { DashboardSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast";
@@ -79,13 +78,16 @@ export function AdminDashboard({ name, email, onSignOut }: { name: string; email
   const [subjects, setSubjects] = useState<Named[]>([]);
   const [schedules, setSchedules] = useState<Named[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (settingsOpen) settingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [settingsOpen]);
+    if (!moreOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMoreOpen(false);
+    }
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [moreOpen]);
 
   useEffect(() => {
     void (async () => {
@@ -300,11 +302,7 @@ export function AdminDashboard({ name, email, onSignOut }: { name: string; email
             </div>
           )}
 
-          {settingsOpen && (
-            <div ref={settingsRef} className="mt-6">
-              <AccountSettings name={name} email={email} role="Administrator" />
-            </div>
-          )}
+
         </section>
       </div>
 
