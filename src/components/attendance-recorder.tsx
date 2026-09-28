@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
 import { supabaseRequest } from "@/lib/supabase";
 import { queueMutation, syncPendingMutations } from "@/lib/offline-queue";
+import {
+  ATTENDANCE_SAVE_HEADERS,
+  buildAttendanceDayQuery,
+  buildAttendanceSavePath,
+} from "@/lib/queries/attendance";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui";
@@ -25,11 +30,8 @@ type AttendanceRecord = {
 
 type Status = "present" | "absent" | "late";
 
-const SAVE_PATH = "AttendanceRecord?on_conflict=student_id,date";
-const SAVE_HEADERS = {
-  "Content-Type": "application/json",
-  Prefer: "resolution=merge-duplicates,return=minimal",
-};
+const SAVE_PATH = buildAttendanceSavePath();
+const SAVE_HEADERS = ATTENDANCE_SAVE_HEADERS;
 
 export function AttendanceRecorder({
   classOptionId,
@@ -64,9 +66,18 @@ export function AttendanceRecorder({
         if (cancelled) return;
         setStudents(roster ?? []);
 
-        const existing = await supabaseRequest<AttendanceRecord[]>(
-          `AttendanceRecord?date=eq.${today}&select=student_id,status,synced_at`,
-        );
+        // `today` is empty until the hydration gate opens. Interpolating that
+        // produced `date=eq.`, which Postgres rejects as an invalid date
+        // (SQLSTATE 22007) and which surfaced as a "Could not load attendance"
+        // toast on every page load. buildAttendanceDayQuery returns null
+        // instead of a broken query, so the fetch is skipped and retried by
+        // the effect re-run once the real date arrives.
+        const dayQuery = buildAttendanceDayQuery(today);
+        if (!dayQuery) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
+        const existing = await supabaseRequest<AttendanceRecord[]>(dayQuery);
         if (cancelled) return;
         const map: Record<string, Status> = {};
         (existing ?? []).forEach((r) => { map[r.student_id] = r.status; });
