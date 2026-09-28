@@ -34,9 +34,22 @@ export type AuthResponse = {
   msg?: string;
 };
 
+export function getStoredUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(currentUserIdKey);
+}
+
+export type AuthUser = {
+  id: string;
+  email?: string;
+  /** Raw bearer token, valid because it was just verified/refreshed. */
+  accessToken: string;
+};
+
 const accessTokenKey = "school_access_token";
 const refreshTokenKey = "school_refresh_token";
 const expiresAtKey = "school_token_expires_at";
+const currentUserIdKey = "school_user_id";
 let refreshInFlight: Promise<boolean> | null = null;
 
 export function persistAuthSession(session: AuthResponse) {
@@ -168,7 +181,52 @@ export async function changePassword(currentPassword: string, newPassword: strin
   if (!response.ok) throw new Error(payload?.error_description ?? payload?.msg ?? payload?.message ?? "Password could not be changed.");
 }
 
-export async function getCurrentUser() {
+/**
+ * Verifies a Supabase access token and returns the user it belongs to.
+ *
+ * This is the **server-side** counterpart to `getCurrentUser`. Route handlers
+ * must use this one: `getCurrentUser` reads from `sessionStorage`, so it
+ * returns null on the server and would reject every request, including ones
+ * carrying a perfectly valid session.
+ *
+ * The token is validated by Supabase rather than by decoding the JWT locally,
+ * so an unsigned or tampered token is never trusted.
+ */
+export async function verifyAccessToken(token: string | null): Promise<{ id: string; email?: string } | null> {
+  if (!token || !supabaseUrl) return null;
+  const raw = token.startsWith("Bearer ") ? token.slice(7) : token;
+  if (!raw) return null;
+  try {
+    const response = await fetch(supabaseEndpoint("/auth/v1/user"), {
+      headers: supabaseHeaders(raw),
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const user = (await response.json()) as { id?: string; email?: string };
+    return user?.id ? { id: user.id, email: user.email } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts the bearer token from a request's Authorization header.
+ */
+export function bearerTokenFrom(request: Request): string | null {
+  const header = request.headers.get("authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+  const token = header.slice(7).trim();
+  return token.length > 0 ? token : null;
+}
+
+/**
+ * Returns the signed-in user, refreshing the access token first if it has
+ * expired. Includes the raw `accessToken` so callers can forward it to a
+ * server route.
+ *
+ * Client-only: returns null on the server.
+ */
+export async function getCurrentUser(): Promise<AuthUser | null> {
   if (typeof window === "undefined") return null;
   await ensureFreshAuthSession();
   async function request() {
@@ -182,5 +240,10 @@ export async function getCurrentUser() {
   let response = await request();
   if (response?.status === 401 && await refreshAuthSession()) response = await request();
   if (!response?.ok) return null;
-  return (await response.json()) as { id: string; email?: string };
+  const user = (await response.json()) as { id: string; email?: string };
+  // Re-read the token: a refresh above may have replaced it, and returning
+  // the stale one would hand callers a value Supabase has already rejected.
+  const accessToken = sessionStorage.getItem(accessTokenKey);
+  if (!accessToken) return null;
+  return { id: user.id, email: user.email, accessToken };
 }

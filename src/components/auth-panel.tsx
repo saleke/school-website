@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { clearAuthSession, persistAuthSession, signIn, signUp } from "@/lib/supabase";
+import { clearAuthSession, getCurrentUser, persistAuthSession, signIn, signUp } from "@/lib/supabase";
 import { Button, Card } from "@/components/ui";
 
 type Role = "student" | "teacher";
@@ -23,9 +23,16 @@ export function AuthPanel({ initialMode = "signup" }: { initialMode?: "signup" |
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("school_access_token")) {
-      router.replace("/portal");
-    }
+    // Presence of a token in storage is not proof it is still valid; it may
+    // be expired or revoked. getCurrentUser() refreshes it and verifies it,
+    // so an unauthenticated visitor is never bounced into the portal only to
+    // be dumped back at the login screen.
+    let cancelled = false;
+    void (async () => {
+      const user = await getCurrentUser();
+      if (!cancelled && user) router.replace("/portal");
+    })();
+    return () => { cancelled = true; };
   }, [router]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {

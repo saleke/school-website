@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { supabaseRequest } from "@/lib/supabase";
+import { getStoredUserId, supabaseRequest } from "@/lib/supabase";
 type Student = { id: string; user_id: string; name?: string; User?: { name?: string } | null };
 type Assessment = { id: string; name: string; max_score: number };
 const assessmentOrder = ["note", "assignment", "test", "exam"];
@@ -73,7 +73,7 @@ export function ScoreEntryGrid({ students, assessments, termId, subjectId }: { s
     setSaving(current => new Set(current).add(key));
     setSaved(current => { const next = new Set(current); next.delete(key); return next; });
     try {
-      await supabaseRequest("Score?on_conflict=student_id,subject_id,term_id,assessment_type_id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ student_id: studentId, subject_id: subjectId, term_id: termId, assessment_type_id: assessment.id, raw_score: value, recorded_by: sessionStorage.getItem("school_user_id") }) });
+      await supabaseRequest("Score?on_conflict=student_id,subject_id,term_id,assessment_type_id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ student_id: studentId, subject_id: subjectId, term_id: termId, assessment_type_id: assessment.id, raw_score: value, recorded_by: getStoredUserId() }) });
       setSaved(current => new Set(current).add(key));
       setMessage("All changes saved.");
     } catch (error) {

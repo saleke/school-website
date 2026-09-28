@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Card } from "@/components/ui";
 import { SubjectManagement } from "@/components/subject-management";
-import { supabaseRequest } from "@/lib/supabase";
+import { getCurrentUser, supabaseRequest } from "@/lib/supabase";
 
 export function AdminCreationForm({ onStatus }: { onStatus: (message: string) => void }) {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -15,7 +15,13 @@ export function AdminCreationForm({ onStatus }: { onStatus: (message: string) =>
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true);
     try {
-      const response = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("school_access_token") ?? ""}` }, body: JSON.stringify(form) });
+      // Read the token through the auth module rather than poking at storage
+      // directly. This previously used `localStorage`, but the session lives
+      // in `sessionStorage`, so the header was always empty and the endpoint
+      // always returned 401.
+      const user = await getCurrentUser();
+      if (!user) throw new Error("Your session expired. Sign in and try again.");
+      const response = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.accessToken}` }, body: JSON.stringify(form) });
       const payload = await response.json() as { message?: string; email?: string };
       if (!response.ok) throw new Error(payload.message ?? "Admin account could not be created.");
       setForm({ name: "", email: "", password: "" }); onStatus(`Admin account created for ${payload.email}.`);
