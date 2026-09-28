@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseRequest } from "@/lib/supabase";
+import {
+  decideNextPoll,
+  isStaleResponse,
+  payloadChanged,
+  statusAfterFailure,
+  statusOnFetchStart,
+} from "@/lib/live-scheduler";
 
 export type LiveStatus = "idle" | "loading" | "live" | "error";
 
@@ -66,18 +73,18 @@ export function useLiveQuery<T>({
 
   const run = useCallback(async () => {
     const seq = ++seqRef.current;
-    setStatus((current) => (current === "idle" ? "loading" : current));
+    setStatus((current) => statusOnFetchStart(current));
     try {
       const rows = await supabaseRequest<T>(path);
       // Drop stale responses: a newer fetch has already superseded this one.
-      if (!mountedRef.current || seq !== seqRef.current) return;
-      setData((current) => (equalsRef.current(rows, current) ? rows : current));
+      if (isStaleResponse(seq, seqRef.current, mountedRef.current)) return;
+      setData((current) => (payloadChanged(rows, current, equalsRef.current) ? rows : current));
       setStatus("live");
       setSyncedAt(Date.now());
     } catch {
-      if (!mountedRef.current || seq !== seqRef.current) return;
+      if (isStaleResponse(seq, seqRef.current, mountedRef.current)) return;
       // Keep the previous data visible; only downgrade the status.
-      setStatus((current) => (current === "live" ? "live" : "error"));
+      setStatus((current) => statusAfterFailure(current));
     }
   }, [path]);
 
@@ -97,10 +104,10 @@ export function useLiveQuery<T>({
     async function tick() {
       if (cancelled) return;
       await run();
-      if (cancelled || intervalMs <= 0) return;
-      // Only poll a visible tab; resume immediately when it comes back.
-      if (document.visibilityState === "visible") {
-        timerRef.current = setTimeout(tick, intervalMs);
+      if (cancelled) return;
+      const decision = decideNextPoll(intervalMs, document.visibilityState);
+      if (decision.shouldSchedule) {
+        timerRef.current = setTimeout(tick, decision.delayMs);
       }
     }
 
