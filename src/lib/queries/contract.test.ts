@@ -82,10 +82,16 @@ const SAFE: Status[] = ["parsed", "value-rejected"];
  *
  * Returns a classification rather than asserting directly, so a network blip
  * cannot be mistaken for a code defect.
+ *
+ * Only transport-level failures are retried. An HTTP response — any status —
+ * is real data about the query and is returned immediately, so a genuine
+ * grammar error is never masked by a retry loop.
  */
 async function check(
   path: string,
+  attempt = 0,
 ): Promise<{ status: Status; code?: string; http?: number; body?: string }> {
+  const MAX_ATTEMPTS = 3;
   try {
     const response = await fetch(`${url}/rest/v1/${path}`, {
       headers: { apikey: key as string, Authorization: `Bearer ${key}` },
@@ -117,6 +123,13 @@ async function check(
     }
     return { status: "unexpected", code: pgCode, http, body };
   } catch (error) {
+    // Transport-level failure: DNS, connection reset, TLS. These say nothing
+    // about the query, so retry with a short backoff. An HTTP response is
+    // never retried — a 400 from PostgREST is real data about the filter.
+    if (attempt < MAX_ATTEMPTS - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+      return check(path, attempt + 1);
+    }
     return { status: "unexpected", http: 0, body: String(error) };
   }
 }
